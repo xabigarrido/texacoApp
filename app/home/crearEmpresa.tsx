@@ -1,0 +1,452 @@
+import {
+  Boton,
+  Box,
+  FadeIn,
+  MarcoLayout,
+  MiIcono,
+  MiInput,
+  TextSmall,
+} from "@/utils/utils";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  StyleSheet,
+  KeyboardAvoidingView,
+  TextInput,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+} from "react-native";
+import MapView, { Callout, Circle, Marker } from "react-native-maps";
+import * as Location from "expo-location";
+import { useApp } from "@/context/appContext";
+import { useSharedValue } from "react-native-reanimated";
+import { Link, useRouter } from "expo-router";
+import { useAuthApp } from "@/context/userContext";
+import { addEmpresa, existeEmpresa } from "@/api/empresas.api";
+import { updateUser } from "@/api/auth.api";
+import * as ImagePicker from "expo-image-picker";
+import axios from "axios";
+export default function Crear() {
+  const [image, setImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const { userId } = useAuthApp();
+  const { setLoadingData } = useApp();
+  const [location, setLocation] = useState<Location.LocationObject | null>(
+    null
+  );
+  const markerRef = useRef(null);
+  const [markers, setMarkers] = useState(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [metrosRange, setMetrosRange] = useState(500);
+  const router = useRouter();
+  const [empresa, setEmpresa] = useState({
+    name: "",
+    nameComplete: false,
+    ubicacion: false,
+    ubicacionComplete: false,
+    logotipoComplete: false,
+    logotipoUrl: "default",
+  });
+
+  const pickImage = async () => {
+    // Solicitar permisos y abrir la galería
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    // console.log(result);
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+
+      uploadImageToCloudinary(result.assets[0].uri); // Subir la imagen a Cloudinary
+    }
+  };
+  const uploadImageToCloudinary = async (uri: string) => {
+    setLoading(true);
+    setLoadingData(true);
+
+    const formData = new FormData();
+    formData.append("file", {
+      uri: uri,
+      type: "image/jpeg", // Cambia el tipo de imagen si es necesario
+      name: "photo.jpg", // Asigna un nombre a la imagen
+    });
+    formData.append("upload_preset", "ml_default"); // Substituye con tu upload preset de Cloudinary
+
+    try {
+      const response = await axios.post(
+        "https://api.cloudinary.com/v1_1/dkbsom45h/image/upload", // Reemplaza con tu cloud name
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      setLoading(false);
+      setLoadingData(false);
+      setImageUrl(response.data.secure_url); // Aquí obtenemos la URL de la imagen subida
+      setEmpresa({ ...empresa, logotipoUrl: response.data.secure_url });
+      console.log("Imagen subida: ", response.data.secure_url);
+    } catch (error) {
+      setLoading(false);
+      // Mostrar más detalles del error
+      console.error(
+        "Error subiendo la imagen: ",
+        error.response ? error.response.data : error
+      );
+    }
+  };
+  const permisosCamara = async () => {
+    setLoadingData(true);
+    setEmpresa({ ...empresa, ubicacion: true });
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      setErrorMsg("Permiso denegado para acceder a la ubicación.");
+      return;
+    }
+
+    let userLocation = await Location.getCurrentPositionAsync({});
+    setLocation(userLocation);
+    const { latitude, longitude } = userLocation.coords;
+    setMarkers({ latitude, longitude }); // Agrega el nuevo marcador al estado
+    setTimeout(() => {
+      if (markerRef.current) {
+        markerRef.current.showCallout();
+      }
+    }, 1000);
+    setLoadingData(false);
+  };
+
+  const handleMapPress = (event) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    setMarkers({ latitude, longitude }); // Agrega el nuevo marcador al estado
+  };
+  function generarNombreUnico(nombre) {
+    const nombreLimpio = nombre
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/[^\w-]+/g, "");
+
+    const numeroUnico = Math.floor(Math.random() * 1000000);
+
+    const nombreUnico = `${nombreLimpio}-${numeroUnico}`;
+
+    return nombreUnico;
+  }
+  const handlePressNewEmpresa = async () => {
+    try {
+      setLoadingData(true);
+      const newEmpresa = {
+        superAdmin: userId,
+        identificador: generarNombreUnico(empresa.name),
+        nameEmpresa: empresa.name,
+        nameEmpresaOriginal: empresa.name.toLowerCase(),
+        posicionHabilitada: empresa.ubicacion,
+        locationEmpresa: markers,
+        distancePick: metrosRange,
+        logotipoUrl: empresa.logotipoUrl,
+        empleadosEmpresa: [userId],
+      };
+      await addEmpresa(newEmpresa);
+      await updateUser(userId, { newUser: false });
+      setLoadingData(false);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      router.replace("/home/start");
+    }
+  };
+  const handleName = async () => {
+    if (!empresa.name.trim()) {
+      return alert("No puedes dejar el nombre en blanco");
+    }
+    const existe = await existeEmpresa(empresa.name.toLowerCase());
+    if (!existe) {
+      setEmpresa({ ...empresa, nameComplete: true });
+    } else {
+      alert("El nombre de la empresa ya existe por favor elige otro");
+    }
+  };
+  return (
+    <MarcoLayout className={" justify-center"} darkMode={true}>
+      <KeyboardAvoidingView behavior="padding">
+        {!empresa.nameComplete && (
+          <View className="items-center">
+            <Box className={"p-4 items-center h-[100%] justify-center"}>
+              <View className="my-3 h-[200px] w-full">
+                <View className="absolute left-1/2 -translate-x-1/2 shadow-black">
+                  <MiIcono
+                    name="circle"
+                    type="FontAwesome"
+                    size={200}
+                    color="#f3f4f6"
+                  />
+                </View>
+                <View className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 ">
+                  <MiIcono name="form" size={100} color="black" />
+                </View>
+              </View>
+              <TextSmall className={"text-2xl font-bold mb-1 text-center"}>
+                Registra tu negocio y comienza a gestionar todo en un solo
+                lugar.
+              </TextSmall>
+              <TextSmall className={"my-4"}>
+                Rellena los siguientes campos para crear tu empresa y optimiza
+                la administración de tus empleados, ventas y más:
+              </TextSmall>
+              <MiInput
+                placeholder="Escribe el nombre oficial de tu empresa."
+                className="w-[80%]"
+                onChangeText={(text) => setEmpresa({ ...empresa, name: text })}
+              />
+              <Boton
+                onPress={handleName}
+                className="bg-green-600 w-[80%] items-center"
+              >
+                Registrar empresa
+              </Boton>
+              <Boton
+                className="mt-2 bg-buttonPrimary"
+                onPress={() => router.replace("/home/firstHome")}
+              >
+                Volver atras
+              </Boton>
+            </Box>
+          </View>
+        )}
+        {empresa.name && !empresa.logotipoComplete && (
+          <View className="items-center">
+            <Box className={"p-4 items-center h-[100%] justify-center"}>
+              <View className="my-3 h-[200px] w-full">
+                <View className="absolute left-1/2 -translate-x-1/2 shadow-black">
+                  <MiIcono
+                    name="circle"
+                    type="FontAwesome"
+                    size={200}
+                    color="#f3f4f6"
+                  />
+                </View>
+                <View className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 ">
+                  <TouchableOpacity onPress={pickImage}>
+                    {image === null ? (
+                      <MiIcono
+                        name="edit"
+                        type="Entypo"
+                        size={100}
+                        color="black"
+                      />
+                    ) : (
+                      <Image
+                        source={{ uri: image }}
+                        style={{ width: 100, height: 100, borderRadius: 20 }}
+                      />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <TextSmall className={"text-2xl font-bold mb-1 text-center"}>
+                Logotipo para {empresa.name}
+              </TextSmall>
+              <TextSmall className={" mb-2"}>
+                Sube el logotipo que refleje la identidad de tu negocio.
+              </TextSmall>
+              <TextSmall className={"mb-4"}>
+                Si no deseas cargar uno ahora, puedes cambiar de logitpo mas
+                adelante desde los ajustes de empresa.
+              </TextSmall>
+
+              <Boton
+                className="bg-violet-600 w-[80%] items-center mb-2"
+                onPress={pickImage}
+              >
+                Cambiar logotipo
+              </Boton>
+              <Boton
+                className="bg-green-600 w-[80%] items-center"
+                onPress={() =>
+                  setEmpresa({ ...empresa, logotipoComplete: true })
+                }
+              >
+                Siguiente
+              </Boton>
+              <Boton
+                className="mt-2 bg-buttonPrimary"
+                onPress={() =>
+                  setEmpresa({ ...empresa, name: "", nameComplete: false })
+                }
+              >
+                Volver atras
+              </Boton>
+            </Box>
+          </View>
+        )}
+        {empresa.nameComplete &&
+          empresa.name &&
+          empresa.logotipoComplete &&
+          !location && (
+            <View className="items-center">
+              <Box className={"p-4 items-center h-[100%] justify-center"}>
+                <View className="my-3 h-[200px] w-full">
+                  <View className="absolute left-1/2 -translate-x-1/2 shadow-black">
+                    <MiIcono
+                      name="circle"
+                      type="FontAwesome"
+                      size={200}
+                      color="#f3f4f6"
+                    />
+                  </View>
+                  <View className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 ">
+                    <MiIcono
+                      type="MaterialCommunityIcons"
+                      name="google-maps"
+                      color="#1D4ED8"
+                      size={100}
+                    />
+                  </View>
+                </View>
+                <TextSmall className={"text-2xl font-bold mb-1 text-center"}>
+                  Ubicación {empresa.name}
+                </TextSmall>
+                <TextSmall className={"my-4"}>
+                  Puedes establecer una ubicación y un rango en metros para que
+                  tus empleados solo puedan fichar dentro de la zona de trabajo.
+                </TextSmall>
+                <View className="border border-gray-400 p-2 rounded-lg items-center">
+                  <TextSmall>
+                    Esta opción es opcional y puedes activarla o desactivarla en
+                    ajustes cuando quieras.
+                  </TextSmall>
+
+                  <Boton
+                    className="bg-violet-500 w-[60%] my-2 items-center"
+                    onPress={() => {
+                      permisosCamara();
+                    }}
+                  >
+                    Activar ahora
+                  </Boton>
+                </View>
+                <Boton
+                  className="w-[80%] bg-green-600 items-center my-2"
+                  onPress={() => {
+                    setEmpresa({ ...empresa, ubicacion: false });
+                    handlePressNewEmpresa();
+                  }}
+                >
+                  Continuar sin activar
+                </Boton>
+                <Boton
+                  className="mt-2 bg-buttonPrimary"
+                  onPress={() => {
+                    setEmpresa({ ...empresa, nameComplete: false, name: "" });
+                  }}
+                >
+                  Volver atrás
+                </Boton>
+              </Box>
+            </View>
+          )}
+        {location && (
+          <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={80}>
+            <View className="items-center justify-center">
+              <MapView
+                style={{ width: "90%", height: "50%" }}
+                initialRegion={{
+                  latitude: location.coords.latitude,
+                  longitude: location.coords.longitude,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                }}
+                onPress={handleMapPress}
+              >
+                <Marker
+                  ref={markerRef}
+                  coordinate={{
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                  }}
+                  title=" 📍Mi ubicación"
+                  pinColor="red"
+                />
+                {markers !== null && (
+                  <>
+                    <Marker
+                      coordinate={{
+                        latitude: markers.latitude,
+                        longitude: markers.longitude,
+                      }}
+                      title="Posicion de empresa"
+                    />
+                    <Circle
+                      center={{
+                        latitude: markers.latitude,
+                        longitude: markers.longitude,
+                      }}
+                      radius={metrosRange} // Radio en metros (ajusta según necesidad)
+                      strokeWidth={2} // Grosor del borde
+                      strokeColor="rgba(197, 2, 200, 0.5)" // Azul semi-transparente
+                      fillColor="rgba(223, 45, 255, 0.2)" // Relleno azul más claro
+                    />
+                  </>
+                )}
+              </MapView>
+              <Box className={"p-4 mt-2 rounded"}>
+                <TextSmall className={"text-2xl font-bold"}>
+                  Pulsa en el mapa el lugar de
+                </TextSmall>
+                <TextSmall className={"text-2xl font-bold"}>
+                  {empresa.name}
+                </TextSmall>
+                <TextSmall className={"text-lg"}>
+                  Rango de distancia para acceder a la jornada laboral
+                </TextSmall>
+                <View className="flex-row items-center">
+                  <MiInput
+                    keyboardType="number-pad"
+                    className="w-[40%] h-10"
+                    value={metrosRange}
+                    placeholder="500"
+                    onChangeText={(text) => {
+                      const newRadius = parseFloat(text); // Convertir a número
+                      if (!isNaN(newRadius)) {
+                        setMetrosRange(newRadius);
+                      }
+                    }}
+                  />
+                  {/* <TextInput keyboardType="number-pad" /> */}
+                  <TextSmall className={"text-2xl"}> metros</TextSmall>
+                </View>
+                <Boton
+                  className="bg-blue-500 items-center mb-2"
+                  onPress={handlePressNewEmpresa}
+                >
+                  Activar Posicion con localizacion
+                </Boton>
+
+                <Boton
+                  className="bg-red-500 items-center"
+                  onPress={() => {
+                    setEmpresa({ ...empresa, ubicacion: false });
+                    setLocation(null);
+                  }}
+                >
+                  Cancelar Posicion con localizacion
+                </Boton>
+              </Box>
+            </View>
+          </KeyboardAvoidingView>
+        )}
+      </KeyboardAvoidingView>
+    </MarcoLayout>
+  );
+}
