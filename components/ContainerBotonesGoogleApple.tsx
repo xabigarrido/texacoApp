@@ -38,7 +38,7 @@ export default function ContainerBotonesGoogleApple() {
 
       if (createdSessionId) {
         setActive!({ session: createdSessionId });
-        router.replace("/home/firstHome");
+        // router.replace("/home/firstHome");
       } else {
         console.log("error al iniciar sesion");
       }

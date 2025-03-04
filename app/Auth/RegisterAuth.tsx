@@ -28,15 +28,15 @@ const RegisterAuth = () => {
   return (
     <MarcoLayout className={"justify-center"} darkMode={true}>
       {!emailVerify && (
-        <FadeIn duration={1000}>
-          <KeyboardAvoidingView behavior="position">
-            <HeaderLogos />
-            <FormularioLogin
-              setEmailVerify={setEmailVerify}
-              setDataUser={setDataUser}
-            />
-          </KeyboardAvoidingView>
-        </FadeIn>
+        // <FadeIn duration={1000}>
+        <KeyboardAvoidingView behavior="position">
+          <HeaderLogos />
+          <FormularioLogin
+            setEmailVerify={setEmailVerify}
+            setDataUser={setDataUser}
+          />
+        </KeyboardAvoidingView>
+        // </FadeIn>
       )}
       {emailVerify && (
         <KeyboardAvoidingView behavior="position">

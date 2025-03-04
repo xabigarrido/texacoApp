@@ -35,7 +35,7 @@ module.exports = {
         cardInfo: "#E0F2FE", // Azul claro para resaltar información dentro de las tarjetas
         cardSuccess: "#D1FAE5", // Verde claro para resaltar elementos de éxito dentro de las tarjetas
         border: "#D1D5DB", // Bordes más suaves
-        shadow: "rgba(0, 0, 0, 0.1)", // Sombra ligera
+        shadow: "rgba(0, 0, 0, 0.2)", // Sombra ligera
         inputBorder: "#D1D5DB", // Bordes de los inputs
         inputText: "#333333", // Texto en los inputs
 

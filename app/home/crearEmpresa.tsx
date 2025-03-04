@@ -29,11 +29,13 @@ import { addEmpresa, existeEmpresa } from "@/api/empresas.api";
 import { updateUser } from "@/api/auth.api";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
+import { arrayUnion } from "firebase/firestore";
+
 export default function Crear() {
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const { userId } = useAuthApp();
+  const { userId, fetchUserData, dataUser } = useAuthApp();
   const { setLoadingData } = useApp();
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null
@@ -156,9 +158,15 @@ export default function Crear() {
         distancePick: metrosRange,
         logotipoUrl: empresa.logotipoUrl,
         empleadosEmpresa: [userId],
+        createdAt: new Date(),
       };
-      await addEmpresa(newEmpresa);
-      await updateUser(userId, { newUser: false });
+      const response = await addEmpresa(newEmpresa, dataUser);
+      console.log(response);
+      await updateUser(userId, {
+        newUser: false,
+        empresasPostuladas: arrayUnion(response),
+      });
+      fetchUserData();
       setLoadingData(false);
     } catch (error) {
       console.log(error);
@@ -217,7 +225,7 @@ export default function Crear() {
               </Boton>
               <Boton
                 className="mt-2 bg-buttonPrimary"
-                onPress={() => router.replace("/home/firstHome")}
+                onPress={() => router.replace("/home/")}
               >
                 Volver atras
               </Boton>
@@ -348,7 +356,7 @@ export default function Crear() {
                 <Boton
                   className="mt-2 bg-buttonPrimary"
                   onPress={() => {
-                    setEmpresa({ ...empresa, nameComplete: false, name: "" });
+                    setEmpresa({ ...empresa, logotipoComplete: false });
                   }}
                 >
                   Volver atrás

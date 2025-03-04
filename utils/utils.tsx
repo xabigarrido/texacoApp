@@ -1,6 +1,8 @@
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
+  Image,
   Keyboard,
   Platform,
   Text,
@@ -12,7 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import { StatusBar } from "expo-status-bar";
-import { Children, forwardRef, useEffect } from "react";
+import React, { Children, forwardRef, useEffect, useState } from "react";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -29,8 +31,21 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Ionicons from "@expo/vector-icons/Ionicons";
-
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import { useApp } from "@/context/appContext";
+import { useAuthApp } from "@/context/userContext";
+import {
+  collection,
+  getDocs,
+  query,
+  Timestamp,
+  where,
+} from "firebase/firestore";
+import { addTikadaSinPosicion } from "@/api/empresas.api";
+import { useRouter } from "expo-router";
+import { db } from "@/firebaseConfig";
+import { useIsFocused } from "@react-navigation/native";
+import { updateUser } from "@/api/auth.api";
 
 const { width: widthScreen, height: heightScreen } = Dimensions.get("window");
 export const DarkMode = () => {
@@ -100,7 +115,7 @@ export const MarcoLayout = ({
 export const TextSmall = ({ children, className }) => {
   return (
     <Text
-      className={`text-textPrimary dark:text-dark-textPrimary font-sans ${className}`}
+      className={`text-textSecondary dark:text-dark-textSecondary font-sans ${className}`}
     >
       {children}
     </Text>
@@ -109,10 +124,10 @@ export const TextSmall = ({ children, className }) => {
 export const TextError = ({ children, className }) => {
   return <Text className={`font-sans text-lg ${className}`}>{children}</Text>;
 };
-export const Boton = ({ children, onPress, className = "bg-green-500" }) => {
+export const Boton = ({ children, onPress, className = "bg-green-600" }) => {
   return (
     <TouchableOpacity
-      className={`rounded py-4 px-5 ${className}`}
+      className={`rounded py-4 px-5 ${className} justify-center`}
       onPress={onPress}
       onPressIn={() => Keyboard.dismiss()}
     >
@@ -214,6 +229,7 @@ export const FadeIn = ({
   }));
   return (
     <Animated.View
+      className={"items-center"}
       style={[
         animatedStyle,
         {
@@ -414,7 +430,7 @@ export const MiIcono = ({
 }) => {
   const { colorScheme } = useColorScheme();
   if (color == "" && className == "") {
-    color = colorScheme === "dark" ? "white" : "black";
+    color = colorScheme === "dark" ? "#E0E0E0" : "#333333";
   } else if (color != "") {
     color = color;
   } else {
@@ -434,6 +450,8 @@ export const MiIcono = ({
     return <Ionicons name={name} size={size} color={color} />;
   } else if (type === "MaterialIcons") {
     return <MaterialIcons name={name} size={size} color={color} />;
+  } else if (type === "FontAwesome5") {
+    return <FontAwesome5 name={name} size={size} color={color} />;
   } else {
     return null;
   }
@@ -475,3 +493,346 @@ export const AnimationRotation = ({
   });
   return <Animated.View style={[animatedStyle]}>{children}</Animated.View>;
 };
+export const HeaderUser = React.memo(() => {
+  const { dataUser, empresaPick } = useAuthApp();
+  const [datosTikada, setDatosTikada] = useState({
+    horaEntrada: "No disponible",
+    tiempoTrabajado: { horas: 0, minutos: 0 },
+  });
+  const isFocus = useIsFocused();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!dataUser) return;
+    const getTikada = async () => {
+      try {
+        const q = query(
+          collection(db, "Tikadas"),
+          where("idEmpleado", "==", dataUser.id),
+          where("estado", "==", true)
+        );
+        const docSnap = await getDocs(q);
+
+        if (!docSnap.empty) {
+          const data = docSnap.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))[0];
+
+          if (data?.entrada?.seconds) {
+            const entradaDate = new Date(data.entrada.seconds * 1000);
+            setDatosTikada({
+              horaEntrada: fechaFormateada(entradaDate),
+              tiempoTrabajado: calcularTiempoTrabajado(entradaDate, new Date()),
+            });
+          } else {
+            setDatosTikada({
+              horaEntrada: "No disponible",
+              tiempoTrabajado: { horas: 0, minutos: 0 },
+            });
+          }
+        } else {
+          setDatosTikada({
+            horaEntrada: "No disponible",
+            tiempoTrabajado: { horas: 0, minutos: 0 },
+          });
+        }
+      } catch (error) {
+        console.log("Error obteniendo datos:", error);
+      }
+    };
+    console.log(empresaPick);
+    getTikada();
+  }, [isFocus]);
+
+  return (
+    <Box className={"p-3"}>
+      <View className="flex-row justify-around items-center ">
+        <View className="flex-1">
+          <TextSmall className={"text-2xl font-medium"}>
+            {dataUser.name} {dataUser?.subname}
+            {empresaPick && (
+              <>
+                <TextSmall> en </TextSmall>
+                <TextSmall
+                  className={"text-blue-700 dark:text-blue-400 font-bold"}
+                >
+                  {empresaPick.nameEmpresa}
+                </TextSmall>
+              </>
+            )}
+          </TextSmall>
+          <View className="flex-row gap-2">
+            <>
+              <View className="flex-row gap-2">
+                <View
+                  className={`p-2 ${
+                    dataUser.trabajando ? "bg-green-800" : "bg-red-600"
+                  } rounded self-start mt-1 w-auto`}
+                >
+                  <TextSmall className={"text-white"}>
+                    {dataUser.trabajando ? "Trabajando" : " No trabajando"}
+                  </TextSmall>
+                </View>
+                {empresaPick &&
+                  dataUser.trabajando &&
+                  dataUser.idEmpresaTrabajando == empresaPick.id && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (!empresaPick.posicionHabilitada) {
+                          addTikadaSinPosicion(dataUser, empresaPick);
+                        } else {
+                          router.replace("/home/start/tikadaMaps");
+                        }
+                      }}
+                    >
+                      <View
+                        className={`p-2 ${
+                          dataUser.trabajando ? "bg-red-600" : "bg-green-800"
+                        } rounded self-start mt-1 w-auto`}
+                      >
+                        <TextSmall className={"text-white"}>
+                          {dataUser.trabajando
+                            ? "Salir del turno ahora"
+                            : "Iniciar turno ahora"}
+                        </TextSmall>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                {empresaPick && !dataUser.trabajando && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!empresaPick.posicionHabilitada) {
+                        addTikadaSinPosicion(dataUser, empresaPick);
+                      } else {
+                        router.replace("/home/start/tikadaMaps");
+                      }
+                    }}
+                  >
+                    <View
+                      className={`p-2 ${
+                        dataUser.trabajando ? "bg-red-600" : "bg-green-800"
+                      } rounded self-start mt-1 w-auto`}
+                    >
+                      <TextSmall className={"text-white"}>
+                        {dataUser.trabajando
+                          ? "Salir del turno ahora"
+                          : "Iniciar turno ahora"}
+                      </TextSmall>
+                    </View>
+                  </TouchableOpacity>
+                )}
+                {/* {empresaPick ? (
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!empresaPick.posicionHabilitada) {
+                        addTikadaSinPosicion(dataUser, empresaPick);
+                      } else {
+                        router.replace("/home/start/tikadaMaps");
+                      }
+                    }}
+                  >
+                    <View
+                      className={`p-2 ${
+                        dataUser.trabajando ? "bg-red-600" : "bg-green-800"
+                      } rounded self-start mt-1 w-auto`}
+                    >
+                      <TextSmall className={"text-white"}>
+                        {dataUser.trabajando
+                          ? "Salir del turno ahora"
+                          : "Iniciar turno ahora"}
+                      </TextSmall>
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  empresaPick &&
+                  dataUser.trabajando &&
+                  dataUser.idEmpresaTrabajando == empresaPick.id && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        addTikadaSinPosicion(dataUser, {
+                          id: dataUser?.idEmpresaTrabajando,
+                        });
+                      }}
+                    >
+                      <View
+                        className={`p-2 ${
+                          dataUser.trabajando ? "bg-red-600" : "bg-green-800"
+                        } rounded self-start mt-1 w-auto`}
+                      >
+                        <TextSmall className={"text-white"}>
+                          {dataUser.trabajando
+                            ? "Salir del turno ahora"
+                            : "Iniciar turno ahora"}
+                        </TextSmall>
+                      </View>
+                    </TouchableOpacity>
+                  )
+                )} */}
+              </View>
+            </>
+          </View>
+
+          {dataUser.trabajando && (
+            <>
+              <View className="flex-row gap-2">
+                <View
+                  className={`p-2 bg-green-800 rounded self-start mt-1 w-auto`}
+                >
+                  <TextSmall className={"text-white"}>Entrada</TextSmall>
+                </View>
+                <View className={`p-2  rounded self-start mt-1 w-auto`}>
+                  <TextSmall className={"font-sans font-semibold"}>
+                    {datosTikada.horaEntrada}
+                  </TextSmall>
+                </View>
+              </View>
+              <View className="flex-row gap-2">
+                <View
+                  className={`p-2 bg-violet-800 rounded self-start mt-1 w-auto`}
+                >
+                  <TextSmall className={"text-white"}>
+                    Tiempo trabajado
+                  </TextSmall>
+                </View>
+                <View className={`p-2  rounded self-start mt-1 w-auto`}>
+                  <TextSmall className={"font-sans font-semibold"}>
+                    {datosTikada.tiempoTrabajado.horas} h{" "}
+                    {datosTikada.tiempoTrabajado.minutos} min
+                  </TextSmall>
+                </View>
+              </View>
+            </>
+          )}
+        </View>
+        <TouchableOpacity
+          onPress={async () => {
+            await updateUser(dataUser.id, { newUser: true });
+          }}
+        >
+          <Image
+            source={{ uri: dataUser.imageUrl }}
+            style={{ width: 80, height: 80, borderRadius: 15 }}
+          />
+        </TouchableOpacity>
+      </View>
+    </Box>
+  );
+});
+export const BotonesHome = ({ nameBoton, onPress, type, name, color }) => {
+  return (
+    <TouchableOpacity onPress={onPress}>
+      <View className="items-center h-[120px]">
+        <MiIcono type={type} name={name} size={80} color={color} />
+        <TextSmall className={"font-bold text-xl"}>{nameBoton}</TextSmall>
+      </View>
+    </TouchableOpacity>
+  );
+};
+export const BotonesAdmin = ({
+  type,
+  name,
+  color,
+  size,
+  nameBoton,
+  onPress,
+}) => {
+  return (
+    <TouchableOpacity onPress={onPress}>
+      <View className="flex-row items-center gap-3 border-[.5px] p-1 rounded-xl w-[300px] justify-between my-1 dark:border-white">
+        <MiIcono type={type} name={name} color={color} size={size} />
+        <TextSmall className={"text-xl text-center"}>{nameBoton}</TextSmall>
+
+        <View />
+      </View>
+    </TouchableOpacity>
+  );
+};
+export const FadeInRepeat = ({ duration = 1000, children }) => {
+  const opacity = useSharedValue(1);
+  useEffect(() => {
+    opacity.value = withRepeat(withTiming(0, { duration }), -1, true);
+  }, []);
+  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return <Animated.View style={[animatedStyle]}>{children}</Animated.View>;
+};
+export const mostrarAlerta = (titulo, mensaje, onPressTrue, onPressFalse) => {
+  Alert.alert(
+    titulo,
+    mensaje,
+    [
+      {
+        text: "Cancelar",
+        onPress: onPressFalse,
+        style: "cancel",
+      },
+      {
+        text: "Aceptar",
+        onPress: onPressTrue,
+      },
+    ],
+    { cancelable: true } // Evita que se cierre tocando fuera de la alerta
+  );
+};
+
+export const convertirFecha = (fechaFirestore) => {
+  if (fechaFirestore instanceof Timestamp) {
+    return fechaFirestore.toDate().toLocaleDateString(); // Convierte a una fecha legible
+  }
+  return "Fecha no disponible"; // Manejo de error
+};
+
+export function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Radio de la Tierra en metros
+  const toRad = (value) => (value * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distancia en metros
+}
+export function formatDistance(distanceMeters) {
+  if (distanceMeters < 1000) {
+    // Redondea a entero y añade "m"
+    return Math.round(distanceMeters) + " m";
+  } else {
+    // Convierte a kilómetros, con 1 decimal, y añade "km"
+    return (distanceMeters / 1000).toFixed(1) + " km";
+  }
+}
+const opciones = {
+  day: "2-digit",
+  month: "short", // "short" para abreviado (ej. "ene"), "long" para completo (ej. "enero")
+  hour: "2-digit",
+  minute: "2-digit",
+};
+
+export const fechaFormateada = (data) => {
+  if (!data) return "Fecha no disponible";
+  // Verifica si data tiene el método toDate (es un Timestamp de Firestore)
+  if (typeof data.toDate === "function") {
+    return data.toDate().toLocaleString("es-ES", opciones);
+  } else {
+    // Si data ya es un objeto Date o una cadena válida, conviértelo a Date
+    const dateObj =
+      typeof data === "object" && data.seconds
+        ? new Date(data.seconds * 1000)
+        : new Date(data);
+    return dateObj.toLocaleString("es-ES", opciones);
+  }
+};
+
+export const calcularTiempoTrabajado = (entrada, salida) => {
+  const diferenciaMs = salida - entrada; // Diferencia en milisegundos
+  const horas = Math.floor(diferenciaMs / (1000 * 60 * 60));
+  const minutos = Math.floor((diferenciaMs % (1000 * 60 * 60)) / (1000 * 60));
+  const segundos = Math.floor((diferenciaMs % (1000 * 60)) / 1000);
+
+  return { horas, minutos, segundos };
+};
+
+// console.log(
+//   `Horas: ${tiempoTrabajado.horas}, Minutos: ${tiempoTrabajado.minutos}, Segundos: ${tiempoTrabajado.segundos}`
+// );

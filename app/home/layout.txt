@@ -1,0 +1,21 @@
+import { useAuthApp } from "@/context/userContext";
+import { Box, FadeIn, HeaderUser, MarcoLayout, TextSmall } from "@/utils/utils";
+import { useRouter } from "expo-router";
+
+const AdminEmpresa = () => {
+  const { empresaPick, dataUser } = useAuthApp();
+  const router = useRouter();
+
+  return (
+    <MarcoLayout darkMode={true} className={"justify-between"}>
+      <FadeIn>
+        <HeaderUser />
+        <Box className={"p-6 m-2"}>
+          <TextSmall>Hola mundo</TextSmall>
+        </Box>
+      </FadeIn>
+    </MarcoLayout>
+  );
+};
+
+export default AdminEmpresa;

@@ -7,10 +7,6 @@ export default function _layout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
-      <Stack.Screen name="crearEmpresa" />
-      <Stack.Screen name="iniciarEnEmpresa" />
-      <Stack.Screen name="start" />
-      {/* <Stack.Screen name="crearEmpresa" /> */}
     </Stack>
   );
 }

@@ -27,9 +27,9 @@ const LoginAuth = () => {
     <MarcoLayout className={"justify-center"} darkMode={true}>
       <KeyboardAvoidingView behavior="padding">
         <HeaderLogos />
-        <FadeIn duration={1000} timeOut={1000}>
-          <FormularioLogin />
-        </FadeIn>
+        {/* <FadeIn duration={1000} timeOut={1000}> */}
+        <FormularioLogin />
+        {/* </FadeIn> */}
         <View className="h-[20%]" />
       </KeyboardAvoidingView>
     </MarcoLayout>
