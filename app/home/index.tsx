@@ -16,7 +16,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
-const firstHome = () => {
+const FirstHome = () => {
   const { userId, isLoaded, signOut, dataUser, isSignedIn } = useAuthApp();
   const [verMasEmpresa, setVerMasEmpresa] = useState(false);
   const router = useRouter();
@@ -58,7 +58,7 @@ const PrimeraVez = ({ verMasEmpresa, setVerMasEmpresa }) => {
     </Box>
   );
 };
-export default firstHome;
+export default FirstHome;
 
 const CrearEntorno = ({ setVerMasEmpresa, verMasEmpresa }) => {
   const router = useRouter();

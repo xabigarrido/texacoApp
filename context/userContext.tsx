@@ -83,10 +83,11 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     return () => suscribirme();
   }, [userId]); // Asegurar que se ejecuta cuando cambia userId
+
   const fetchUserData = async () => {
     const data = await obtenerDatosUser(userId);
     setDataUser(data);
-    router.replace("/home/");
+    // router.replace("/home/");
   };
   return (
     <AuthContext.Provider

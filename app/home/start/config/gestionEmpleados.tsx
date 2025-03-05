@@ -1,5 +1,12 @@
 import { useAuthApp } from "@/context/userContext";
-import { Box, FadeIn, HeaderUser, MarcoLayout, TextSmall } from "@/utils/utils";
+import {
+  Box,
+  FadeIn,
+  HeaderUser,
+  MarcoLayout,
+  TabMenu,
+  TextSmall,
+} from "@/utils/utils";
 import { useRouter } from "expo-router";
 import {
   collection,
@@ -34,12 +41,7 @@ const GestionEmpleados = () => {
 
   return (
     <MarcoLayout darkMode={true} className={"justify-between"}>
-      <View className="absolute z-50 bottom-10 left-5">
-        <Image
-          source={{ uri: empresaPick.logotipoUrl }}
-          style={{ width: 80, height: 80, borderRadius: 15 }}
-        />
-      </View>
+      <TabMenu />
       <FadeIn>
         <HeaderUser />
         <Box className={"p-6 m-2"}>

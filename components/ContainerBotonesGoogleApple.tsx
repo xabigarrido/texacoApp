@@ -33,12 +33,10 @@ export default function ContainerBotonesGoogleApple() {
       const { createdSessionId, setActive, signIn, signUp } =
         await startSSOFlow({
           strategy: "oauth_google",
-          redirectUrl: AuthSession.makeRedirectUri(),
         });
 
       if (createdSessionId) {
         setActive!({ session: createdSessionId });
-        // router.replace("/home/firstHome");
       } else {
         console.log("error al iniciar sesion");
       }

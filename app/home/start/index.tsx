@@ -12,7 +12,7 @@ import {
 } from "@/utils/utils";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Image, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, TouchableOpacity, View } from "react-native";
 
 const pickEmpresas = React.memo(() => {
   const {
@@ -51,8 +51,16 @@ const pickEmpresas = React.memo(() => {
     <MarcoLayout darkMode={true}>
       <View className="items-center">
         <HeaderUser dataUser={dataUser} />
-        <Box className={"p-3 mt-2 items-center"}>
-          <View className="flex-row flex-wrap gap-6">
+        <Box className={"p-3 mt-2 items-center justify-center"}>
+          {empresas.length == 0 &&
+            !dataUser.newUser &&
+            dataUser.empresasPostuladas.length > 0 && (
+              <>
+                <ActivityIndicator />
+                <TextSmall>Cargando empresas</TextSmall>
+              </>
+            )}
+          <View className="flex-row flex-wrap items-center justify-center gap-4">
             {empresas.length > 0 &&
               empresas.map((empresa) => (
                 <TouchableOpacity
@@ -74,16 +82,16 @@ const pickEmpresas = React.memo(() => {
                 </TouchableOpacity>
               ))}
           </View>
-          {/* {empresas.length === 0 && (
+          {empresas.length == 0 && dataUser.empresasPostuladas.length === 0 && (
             <View>
-              <Boton className="my-1 bg-violet-500" onPress={handleButtons}>
+              <Boton className="my-1 bg-violet-800" onPress={handleButtons}>
                 Crear una empresa
               </Boton>
-              <Boton className="my-1 bg-green-500" onPress={handleButtons}>
+              <Boton className="my-1 bg-green-800" onPress={handleButtons}>
                 Ingresar en una empresa
               </Boton>
             </View>
-          )} */}
+          )}
         </Box>
       </View>
     </MarcoLayout>

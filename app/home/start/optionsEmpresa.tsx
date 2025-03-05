@@ -6,6 +6,7 @@ import {
   HeaderUser,
   MarcoLayout,
   MiIcono,
+  TabMenu,
   TextSmall,
 } from "@/utils/utils";
 import { useRouter } from "expo-router";
@@ -15,26 +16,10 @@ import { Image, Text, TouchableOpacity, View } from "react-native";
 const OptionsEmpresa = () => {
   const { empresaPick, dataUser, setEmpresaPick, userId } = useAuthApp();
   const router = useRouter();
-  useEffect(() => {}, []);
+
   return (
     <MarcoLayout darkMode={true} className={"justify-between"}>
-      <View className="absolute z-50 bottom-10 left-5 flex-row items-center">
-        <Image
-          source={{ uri: empresaPick.logotipoUrl }}
-          style={{ width: 80, height: 80, borderRadius: 15 }}
-        />
-        <TouchableOpacity
-          className="bg-violet-400 p-2 rounded-r-full"
-          onPress={() => {
-            setEmpresaPick(null);
-            router.replace("/home/start");
-          }}
-        >
-          <TextSmall className={"text-white font-bold"}>
-            Ver otras empresas
-          </TextSmall>
-        </TouchableOpacity>
-      </View>
+      <TabMenu />
       <FadeIn>
         <HeaderUser />
       </FadeIn>
@@ -42,6 +27,7 @@ const OptionsEmpresa = () => {
         <Box className={"py-6 px-6 mt-2 items-center"}>
           <View className="flex-row flex-wrap items-center justify-center w-[200px] gap-10">
             <BotonesHome
+              onPress={() => router.navigate("/home/start/config/pruebasMapa")}
               name={"tablet-dashboard"}
               type={"MaterialCommunityIcons"}
               nameBoton={"Zonas"}

@@ -1,169 +1,214 @@
-import { useApp } from "@/context/appContext";
-import { useAuthApp } from "@/context/userContext";
-import {
-  Box,
-  FadeIn,
-  HeaderUser,
-  MarcoLayout,
-  TextSmall,
-  formatDistance,
-  haversineDistance,
-} from "@/utils/utils";
-import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import MapView, { Circle, Marker } from "react-native-maps";
-import * as Location from "expo-location";
-import { TouchableOpacity, View } from "react-native";
+// import { useApp } from "@/context/appContext";
+// import { useAuthApp } from "@/context/userContext";
+// import { useRouter } from "expo-router";
+// import { useEffect, useRef, useState } from "react";
+// import { TouchableOpacity, View } from "react-native";
+// import WebView from "react-native-webview";
+
+// const urlpage = "http://192.168.50.68:5173/entrarEmpresa"; // URL de tu página web
+
+// const EntrarEmpresa = () => {
+//   const { empresaPick, dataUser } = useAuthApp();
+//   const { setLoadingData } = useApp();
+//   const router = useRouter();
+//   const [metrosRange, setMetrosRange] = useState(empresaPick.distancePick);
+//   const [distancia, setDistancia] = useState(null);
+//   const webViewRef = useRef(null); // Cambiado de useState a useRef
+
+//   const handleIniciar = async () => {
+//     console.log("Distancia:", distancia, "Limite:", metrosRange);
+//     // Compara la distancia numérica
+//     if (distancia > metrosRange) {
+//       alert(
+//         `Debes acercarte a ${empresaPick.nameEmpresa} ${formatDistance(
+//           distancia - metrosRange
+//         )}`
+//       );
+//     } else {
+//       await addTikadaSinPosicion(dataUser, empresaPick);
+//       router.replace("/home/start/optionsEmpresa");
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (webViewRef.current) {
+//       // Aquí puedes enviar las coordenadas cuando la WebView esté lista
+//       const coordenadas = {
+//         latitude: 37.7749, // Usa las coordenadas reales
+//         longitude: -122.4194, // Usa las coordenadas reales
+//       };
+
+//       // Enviar las coordenadas a la web a través de postMessage
+//       webViewRef.current.postMessage(JSON.stringify(coordenadas));
+//     }
+//   }, [webViewRef.current]); // Dependencia sobre la referencia
+
+//   return (
+//     <View style={{ flex: 1 }}>
+//       <WebView
+//         ref={webViewRef} // Asignamos la referencia
+//         source={{ uri: urlpage }} // URL de la página web
+//         onMessage={(event) => {
+//           // Aquí puedes manejar los mensajes recibidos desde la web
+//           const data = JSON.parse(event.nativeEvent.data);
+//           console.log("Mensaje recibido desde la web:", data);
+//         }}
+//       />
+//     </View>
+//   );
+// };
+
+// export default EntrarEmpresa;
+// import { addTikadaSinPosicion } from "@/api/empresas.api";
+// import { useAuthApp } from "@/context/userContext";
+// import { formatDistance, haversineDistanceNew } from "@/utils/utils";
+// import { useRouter } from "expo-router";
+// import React, { useEffect, useRef } from "react";
+// import { View } from "react-native";
+// import { WebView } from "react-native-webview";
+
+// export default function MapaWebView() {
+//   const webViewRef = useRef(null);
+//   const { empresaPick, dataUser } = useAuthApp();
+//   const router = useRouter();
+
+//   useEffect(() => {
+//     const coordenadas = JSON.stringify({
+//       lat: empresaPick.locationEmpresa[0],
+//       lng: empresaPick.locationEmpresa[1],
+//       distancePick: empresaPick.distancePick,
+//       nameEmpresa: empresaPick.nameEmpresa,
+//       trabajando: dataUser.trabajando,
+//     }); // Convertir a string
+
+//     setTimeout(() => {
+//       if (webViewRef.current) {
+//         webViewRef.current.postMessage(coordenadas); // Enviar JSON string
+//       }
+//     }, 500); // Esperamos 1 segundo para asegurarnos de que WebView está listo
+//   }, []);
+
+//   // Construir la URL con los parámetros
+//   // const url = `http://192.168.50.68:5173/entrarempresa`;
+//   const url = "https://regal-figolla-a5f516.netlify.app/entrarempresa";
+//   const handleMessage = async (event: any) => {
+//     const message = event.nativeEvent.data;
+
+//     try {
+//       const locationData = JSON.parse(message);
+//       console.log(locationData.action);
+//       const disctanciaTrabajo = haversineDistanceNew(
+//         locationData.ubicacionEmpleado,
+//         empresaPick.locationEmpresa
+//       );
+//       if (locationData.action == "confirm") {
+//         if (disctanciaTrabajo > empresaPick.distancePick) {
+//           const distancia = formatDistance(
+//             disctanciaTrabajo - empresaPick.distancePick
+//           );
+//           console.log(distancia);
+//           alert(`Estas lejos debes acercarte: ${distancia}`);
+//         } else {
+//           addTikadaSinPosicion(dataUser, empresaPick);
+//           router.replace("/home/start");
+//         }
+//       } else {
+//         router.replace("/home/start");
+//       }
+//     } catch (error) {
+//       console.error("Error al recibir los datos:", error);
+//     }
+//   };
+//   return (
+//     <View style={{ flex: 1 }}>
+//       <WebView
+//         ref={webViewRef}
+//         source={{
+//           uri: url,
+//         }} // URL de tu web
+//         onMessage={handleMessage}
+//       />
+//     </View>
+//   );
+// }
 import { addTikadaSinPosicion } from "@/api/empresas.api";
+import { useAuthApp } from "@/context/userContext";
+import { formatDistance, haversineDistanceNew } from "@/utils/utils";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef } from "react";
+import { View } from "react-native";
+import { WebView } from "react-native-webview";
 
-const AdminEmpresa = () => {
+export default function MapaWebView() {
+  const webViewRef = useRef(null);
   const { empresaPick, dataUser } = useAuthApp();
-  const { setLoadingData } = useApp();
   const router = useRouter();
-  const [location, setLocation] = useState(null);
-  const [markers, setMarkers] = useState({
-    latitude: empresaPick.locationEmpresa.latitude,
-    longitude: empresaPick.locationEmpresa.longitude,
-  });
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [metrosRange, setMetrosRange] = useState(empresaPick.distancePick);
-  const [distancia, setDistancia] = useState(null);
 
-  useEffect(() => {
-    const getLocation = async () => {
-      try {
-        setLoadingData(true);
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          setErrorMsg("Permiso denegado para acceder a la ubicación.");
-          setLoadingData(false);
-          return;
-        }
-        let userLocation = await Location.getCurrentPositionAsync({});
-        setLocation(userLocation);
+  // Construcción de coordenadas
+  const coordenadas = {
+    lat: empresaPick.locationEmpresa[0],
+    lng: empresaPick.locationEmpresa[1],
+    distancePick: empresaPick.distancePick,
+    nameEmpresa: empresaPick.nameEmpresa,
+    trabajando: dataUser.trabajando,
+  };
 
-        // Calcula la distancia en metros (valor numérico)
-        const distanceMeters = haversineDistance(
-          userLocation.coords.latitude,
-          userLocation.coords.longitude,
-          empresaPick.locationEmpresa.latitude,
-          empresaPick.locationEmpresa.longitude
-        );
-        setDistancia(distanceMeters);
+  // Inyección de datos antes de la carga de la web
+  // const injectedJS = `
+  //   window.initialData = ${coordenadas};
+  //   true;
+  // `;
+  const injectedJS = `
+    window.nameEmpresa = "${empresaPick.nameEmpresa}";
+    window.latEmpresa = "${empresaPick.locationEmpresa[0]}";
+    window.longEmpresa = "${empresaPick.locationEmpresa[1]}";
+    window.distancePick = "${empresaPick.distancePick}";
+    window.trabajando = "${dataUser.trabajando}";
+    true;
+  `;
+  // URL del WebView
+  const url = "https://regal-figolla-a5f516.netlify.app/entrarempresa";
+  // const url = "http://192.168.50.68:5173/entrarempresa";
 
-        setLoadingData(false);
-      } catch (error) {
-        console.log(error);
-        setLoadingData(false);
-      }
-    };
-    getLocation();
-  }, []);
+  // Manejo de mensajes desde la WebView
+  const handleMessage = async (event: any) => {
+    const message = event.nativeEvent.data;
 
-  useEffect(() => {
-    setMarkers({
-      latitude: empresaPick.locationEmpresa.latitude,
-      longitude: empresaPick.locationEmpresa.longitude,
-    });
-  }, [empresaPick.locationEmpresa]);
+    try {
+      const locationData = JSON.parse(message);
+      console.log(locationData.action);
 
-  if (!location) {
-    return (
-      <MarcoLayout darkMode={true}>
-        <TextSmall>Cargando ubicación...</TextSmall>
-      </MarcoLayout>
-    );
-  }
-
-  const handleIniciar = async () => {
-    console.log("Distancia:", distancia, "Limite:", metrosRange);
-    // Compara la distancia numérica
-    if (distancia > metrosRange) {
-      alert(
-        `Debes acercarte a ${empresaPick.nameEmpresa} ${formatDistance(
-          distancia - metrosRange
-        )}`
+      const disctanciaTrabajo = haversineDistanceNew(
+        locationData.ubicacionEmpleado,
+        empresaPick.locationEmpresa
       );
-    } else {
-      await addTikadaSinPosicion(dataUser, empresaPick);
-      router.replace("/home/start/optionsEmpresa");
+
+      if (locationData.action === "confirm") {
+        if (disctanciaTrabajo > empresaPick.distancePick) {
+          const distancia = formatDistance(
+            disctanciaTrabajo - empresaPick.distancePick
+          );
+          alert(`Estás lejos, debes acercarte: ${distancia}`);
+        } else {
+          addTikadaSinPosicion(dataUser, empresaPick);
+          router.replace("/home/start");
+        }
+      } else {
+        router.replace("/home/start");
+      }
+    } catch (error) {
+      console.error("Error al recibir los datos:", error);
     }
   };
 
   return (
-    <MarcoLayout darkMode={true} className={"justify-between"}>
-      <FadeIn>
-        <Box className="absolute bottom-20 w-full items-center p-4 flex-row gap-2 justify-center z-50">
-          {dataUser.trabajando ? (
-            <TouchableOpacity
-              className="bg-buttonDanger px-4 py-2 rounded"
-              onPress={handleIniciar}
-            >
-              <TextSmall className={"font-sans text-2xl text-white"}>
-                Cerrar turno
-              </TextSmall>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              className="bg-buttonPrimary px-4 py-2 rounded"
-              onPress={handleIniciar}
-            >
-              <TextSmall className={"font-sans text-2xl text-white"}>
-                Iniciar turno
-              </TextSmall>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            className="bg-dark-buttonSecondary px-4 py-2 rounded"
-            onPress={() => router.replace("/home/start/optionsEmpresa")}
-          >
-            <TextSmall className={"font-sans text-2xl text-white"}>
-              Volver atras
-            </TextSmall>
-          </TouchableOpacity>
-        </Box>
-        <MapView
-          style={{ width: "100%", height: "100%" }}
-          initialRegion={{
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }}
-        >
-          <Marker
-            coordinate={{
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-            }}
-            title="📍 Mi ubicación"
-            pinColor="red"
-          />
-          {markers.latitude && markers.longitude && (
-            <>
-              <Marker
-                coordinate={{
-                  latitude: markers.latitude,
-                  longitude: markers.longitude,
-                }}
-                title={empresaPick.nameEmpresa}
-              />
-              <Circle
-                center={{
-                  latitude: markers.latitude,
-                  longitude: markers.longitude,
-                }}
-                radius={metrosRange} // Radio en metros (ajusta según necesidad)
-                strokeWidth={2}
-                strokeColor="rgba(197, 2, 200, 0.5)"
-                fillColor="rgba(223, 45, 255, 0.2)"
-              />
-            </>
-          )}
-        </MapView>
-      </FadeIn>
-    </MarcoLayout>
+    <View style={{ flex: 1 }}>
+      <WebView
+        ref={webViewRef}
+        source={{ uri: url }}
+        injectedJavaScript={injectedJS}
+        onMessage={handleMessage}
+      />
+    </View>
   );
-};
-
-export default AdminEmpresa;
+}

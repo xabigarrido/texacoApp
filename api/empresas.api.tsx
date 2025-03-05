@@ -54,19 +54,21 @@ export const crearSolicitudEmpresa = async (
   dataUser,
   enviarA = null
 ) => {
+  console.log(identificador);
   try {
     const q = query(
       collecRefEmpresa,
       where("identificador", "==", identificador)
     );
     const docSnap = await getDocs(q);
-    const companyDoc = docSnap.docs[0];
-    const companyData = { id: companyDoc.id, ...companyDoc.data() };
+
     if (docSnap.empty) {
       return alert(
         "No existe ese identificador asegurate de escribirlo bien minusculas y mayuculas"
       );
     }
+    const companyDoc = docSnap.docs[0];
+    const companyData = { id: companyDoc.id, ...companyDoc.data() };
     const docData = { id: docSnap.docs[0].id, ...docSnap.docs[0].data() };
 
     const q2 = query(
@@ -235,7 +237,6 @@ export const deleteEmpleadoEmpresa = async (idEmpleado, idEmpresa, idDoc) => {
   }
 };
 export const addTikadaSinPosicion = async (dataUser, empresaPcik) => {
-  console.log(empresaPcik);
   try {
     const docUserRef = doc(collecRefUsuarios, dataUser.id);
     const docDataUser = await getDoc(docUserRef);
@@ -265,6 +266,7 @@ export const addTikadaSinPosicion = async (dataUser, empresaPcik) => {
       trabajando: !dataUser.trabajando,
       entradaTrabajar: new Date(),
       idEmpresaTrabajando: empresaPcik.id,
+      trabajandoPara: empresaPcik.nameEmpresa,
     });
     await updateDoc(
       doc(db, "Empresas", empresaPcik.id, "Empleados", docIdRef),
@@ -272,6 +274,7 @@ export const addTikadaSinPosicion = async (dataUser, empresaPcik) => {
         trabajando: !dataUser.trabajando,
         entradaTrabajar: new Date(),
         idEmpresaTrabajando: empresaPcik.id,
+        trabajandoPara: empresaPcik.nameEmpresa,
       }
     );
 

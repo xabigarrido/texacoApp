@@ -8,6 +8,7 @@ import {
   HeaderUser,
   MarcoLayout,
   MiIcono,
+  TabMenu,
   TextSmall,
 } from "@/utils/utils";
 import { useRouter } from "expo-router";
@@ -57,12 +58,7 @@ const AdminEmpresa = () => {
   }, [empresaPick]);
   return (
     <MarcoLayout darkMode={true} className={"justify-between"}>
-      <View className="absolute z-50 bottom-10 left-5">
-        <Image
-          source={{ uri: empresaPick.logotipoUrl }}
-          style={{ width: 80, height: 80, borderRadius: 15 }}
-        />
-      </View>
+      <TabMenu />
       <FadeIn>
         <HeaderUser />
         <Box className={"my-2 w-[80%] py-3"}>

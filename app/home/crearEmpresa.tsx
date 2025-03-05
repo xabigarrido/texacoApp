@@ -19,8 +19,6 @@ import {
   Image,
   TouchableOpacity,
 } from "react-native";
-import MapView, { Callout, Circle, Marker } from "react-native-maps";
-import * as Location from "expo-location";
 import { useApp } from "@/context/appContext";
 import { useSharedValue } from "react-native-reanimated";
 import { Link, useRouter } from "expo-router";
@@ -37,13 +35,7 @@ export default function Crear() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const { userId, fetchUserData, dataUser } = useAuthApp();
   const { setLoadingData } = useApp();
-  const [location, setLocation] = useState<Location.LocationObject | null>(
-    null
-  );
-  const markerRef = useRef(null);
-  const [markers, setMarkers] = useState(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [metrosRange, setMetrosRange] = useState(500);
+
   const router = useRouter();
   const [empresa, setEmpresa] = useState({
     name: "",
@@ -108,31 +100,7 @@ export default function Crear() {
       );
     }
   };
-  const permisosCamara = async () => {
-    setLoadingData(true);
-    setEmpresa({ ...empresa, ubicacion: true });
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      setErrorMsg("Permiso denegado para acceder a la ubicación.");
-      return;
-    }
 
-    let userLocation = await Location.getCurrentPositionAsync({});
-    setLocation(userLocation);
-    const { latitude, longitude } = userLocation.coords;
-    setMarkers({ latitude, longitude }); // Agrega el nuevo marcador al estado
-    setTimeout(() => {
-      if (markerRef.current) {
-        markerRef.current.showCallout();
-      }
-    }, 1000);
-    setLoadingData(false);
-  };
-
-  const handleMapPress = (event) => {
-    const { latitude, longitude } = event.nativeEvent.coordinate;
-    setMarkers({ latitude, longitude }); // Agrega el nuevo marcador al estado
-  };
   function generarNombreUnico(nombre) {
     const nombreLimpio = nombre
       .toLowerCase()
@@ -145,7 +113,7 @@ export default function Crear() {
 
     return nombreUnico;
   }
-  const handlePressNewEmpresa = async () => {
+  const handlePressNewEmpresa = async ({ ubicacion }) => {
     try {
       setLoadingData(true);
       const newEmpresa = {
@@ -154,24 +122,27 @@ export default function Crear() {
         nameEmpresa: empresa.name,
         nameEmpresaOriginal: empresa.name.toLowerCase(),
         posicionHabilitada: empresa.ubicacion,
-        locationEmpresa: markers,
-        distancePick: metrosRange,
+        distancePick: 0,
         logotipoUrl: empresa.logotipoUrl,
         empleadosEmpresa: [userId],
         createdAt: new Date(),
       };
       const response = await addEmpresa(newEmpresa, dataUser);
-      console.log(response);
       await updateUser(userId, {
-        newUser: false,
+        newUser: ubicacion ? true : false,
         empresasPostuladas: arrayUnion(response),
       });
-      fetchUserData();
-      setLoadingData(false);
+      if (!ubicacion) {
+        router.replace("/home/start");
+      } else {
+        router.replace(
+          `/home/start/config/pickRangeUbicacion?identificador=${newEmpresa.identificador}`
+        );
+      }
     } catch (error) {
       console.log(error);
     } finally {
-      router.replace("/home/start");
+      setLoadingData(false);
     }
   };
   const handleName = async () => {
@@ -298,161 +269,69 @@ export default function Crear() {
             </Box>
           </View>
         )}
-        {empresa.nameComplete &&
-          empresa.name &&
-          empresa.logotipoComplete &&
-          !location && (
-            <View className="items-center">
-              <Box className={"p-4 items-center h-[100%] justify-center"}>
-                <View className="my-3 h-[200px] w-full">
-                  <View className="absolute left-1/2 -translate-x-1/2 shadow-black">
-                    <MiIcono
-                      name="circle"
-                      type="FontAwesome"
-                      size={200}
-                      color="#f3f4f6"
-                    />
-                  </View>
-                  <View className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 ">
-                    <MiIcono
-                      type="MaterialCommunityIcons"
-                      name="google-maps"
-                      color="#1D4ED8"
-                      size={100}
-                    />
-                  </View>
-                </View>
-                <TextSmall className={"text-2xl font-bold mb-1 text-center"}>
-                  Ubicación {empresa.name}
-                </TextSmall>
-                <TextSmall className={"my-4"}>
-                  Puedes establecer una ubicación y un rango en metros para que
-                  tus empleados solo puedan fichar dentro de la zona de trabajo.
-                </TextSmall>
-                <View className="border border-gray-400 p-2 rounded-lg items-center">
-                  <TextSmall>
-                    Esta opción es opcional y puedes activarla o desactivarla en
-                    ajustes cuando quieras.
-                  </TextSmall>
-
-                  <Boton
-                    className="bg-violet-500 w-[60%] my-2 items-center"
-                    onPress={() => {
-                      permisosCamara();
-                    }}
-                  >
-                    Activar ahora
-                  </Boton>
-                </View>
-                <Boton
-                  className="w-[80%] bg-green-600 items-center my-2"
-                  onPress={() => {
-                    setEmpresa({ ...empresa, ubicacion: false });
-                    handlePressNewEmpresa();
-                  }}
-                >
-                  Continuar sin activar
-                </Boton>
-                <Boton
-                  className="mt-2 bg-buttonPrimary"
-                  onPress={() => {
-                    setEmpresa({ ...empresa, logotipoComplete: false });
-                  }}
-                >
-                  Volver atrás
-                </Boton>
-              </Box>
-            </View>
-          )}
-        {location && (
-          <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={80}>
-            <View className="items-center justify-center">
-              <MapView
-                style={{ width: "90%", height: "50%" }}
-                initialRegion={{
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }}
-                onPress={handleMapPress}
-              >
-                <Marker
-                  ref={markerRef}
-                  coordinate={{
-                    latitude: location.coords.latitude,
-                    longitude: location.coords.longitude,
-                  }}
-                  title=" 📍Mi ubicación"
-                  pinColor="red"
-                />
-                {markers !== null && (
-                  <>
-                    <Marker
-                      coordinate={{
-                        latitude: markers.latitude,
-                        longitude: markers.longitude,
-                      }}
-                      title="Posicion de empresa"
-                    />
-                    <Circle
-                      center={{
-                        latitude: markers.latitude,
-                        longitude: markers.longitude,
-                      }}
-                      radius={metrosRange} // Radio en metros (ajusta según necesidad)
-                      strokeWidth={2} // Grosor del borde
-                      strokeColor="rgba(197, 2, 200, 0.5)" // Azul semi-transparente
-                      fillColor="rgba(223, 45, 255, 0.2)" // Relleno azul más claro
-                    />
-                  </>
-                )}
-              </MapView>
-              <Box className={"p-4 mt-2 rounded"}>
-                <TextSmall className={"text-2xl font-bold"}>
-                  Pulsa en el mapa el lugar de
-                </TextSmall>
-                <TextSmall className={"text-2xl font-bold"}>
-                  {empresa.name}
-                </TextSmall>
-                <TextSmall className={"text-lg"}>
-                  Rango de distancia para acceder a la jornada laboral
-                </TextSmall>
-                <View className="flex-row items-center">
-                  <MiInput
-                    keyboardType="number-pad"
-                    className="w-[40%] h-10"
-                    value={metrosRange}
-                    placeholder="500"
-                    onChangeText={(text) => {
-                      const newRadius = parseFloat(text); // Convertir a número
-                      if (!isNaN(newRadius)) {
-                        setMetrosRange(newRadius);
-                      }
-                    }}
+        {empresa.nameComplete && empresa.name && empresa.logotipoComplete && (
+          <View className="items-center">
+            <Box className={"p-4 items-center h-[100%] justify-center"}>
+              <View className="my-3 h-[200px] w-full">
+                <View className="absolute left-1/2 -translate-x-1/2 shadow-black">
+                  <MiIcono
+                    name="circle"
+                    type="FontAwesome"
+                    size={200}
+                    color="#f3f4f6"
                   />
-                  {/* <TextInput keyboardType="number-pad" /> */}
-                  <TextSmall className={"text-2xl"}> metros</TextSmall>
                 </View>
-                <Boton
-                  className="bg-blue-500 items-center mb-2"
-                  onPress={handlePressNewEmpresa}
-                >
-                  Activar Posicion con localizacion
-                </Boton>
+                <View className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 ">
+                  <MiIcono
+                    type="MaterialCommunityIcons"
+                    name="google-maps"
+                    color="#1D4ED8"
+                    size={100}
+                  />
+                </View>
+              </View>
+              <TextSmall className={"text-2xl font-bold mb-1 text-center"}>
+                Ubicación {empresa.name}
+              </TextSmall>
+              <TextSmall className={"my-4"}>
+                Puedes establecer una ubicación y un rango en metros para que
+                tus empleados solo puedan fichar dentro de la zona de trabajo.
+              </TextSmall>
+              <View className="border border-gray-400 p-2 rounded-lg items-center">
+                <TextSmall>
+                  Esta opción es opcional y puedes activarla o desactivarla en
+                  ajustes cuando quieras.
+                </TextSmall>
 
                 <Boton
-                  className="bg-red-500 items-center"
+                  className="bg-violet-500 w-[60%] my-2 items-center"
                   onPress={() => {
-                    setEmpresa({ ...empresa, ubicacion: false });
-                    setLocation(null);
+                    setEmpresa({ ...empresa, ubicacion: true });
+                    handlePressNewEmpresa({ ubicacion: true });
                   }}
                 >
-                  Cancelar Posicion con localizacion
+                  Activar ahora
                 </Boton>
-              </Box>
-            </View>
-          </KeyboardAvoidingView>
+              </View>
+              <Boton
+                className="w-[80%] bg-green-600 items-center my-2"
+                onPress={() => {
+                  setEmpresa({ ...empresa, ubicacion: false });
+                  handlePressNewEmpresa({ ubicacion: false });
+                }}
+              >
+                Continuar sin activar
+              </Boton>
+              <Boton
+                className="mt-2 bg-buttonPrimary"
+                onPress={() => {
+                  setEmpresa({ ...empresa, logotipoComplete: false });
+                }}
+              >
+                Volver atrás
+              </Boton>
+            </Box>
+          </View>
         )}
       </KeyboardAvoidingView>
     </MarcoLayout>

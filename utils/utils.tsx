@@ -553,7 +553,7 @@ export const HeaderUser = React.memo(() => {
             {dataUser.name} {dataUser?.subname}
             {empresaPick && (
               <>
-                <TextSmall> en </TextSmall>
+                <TextSmall> estas en </TextSmall>
                 <TextSmall
                   className={"text-blue-700 dark:text-blue-400 font-bold"}
                 >
@@ -565,15 +565,46 @@ export const HeaderUser = React.memo(() => {
           <View className="flex-row gap-2">
             <>
               <View className="flex-row gap-2">
-                <View
-                  className={`p-2 ${
-                    dataUser.trabajando ? "bg-green-800" : "bg-red-600"
-                  } rounded self-start mt-1 w-auto`}
-                >
-                  <TextSmall className={"text-white"}>
-                    {dataUser.trabajando ? "Trabajando" : " No trabajando"}
-                  </TextSmall>
-                </View>
+                {dataUser.trabajando && !empresaPick && (
+                  <View
+                    className={`p-2 ${
+                      dataUser.trabajando ? "bg-green-800" : "bg-red-600"
+                    } rounded self-start mt-1 w-auto`}
+                  >
+                    <TextSmall className={"text-white"}>
+                      {dataUser.trabajando
+                        ? `Trabajando en ${dataUser.trabajandoPara}`
+                        : " No trabajando"}
+                    </TextSmall>
+                  </View>
+                )}
+                {/* {dataUser.trabajando && empresaPick && (
+                  <View
+                    className={`p-2 ${
+                      dataUser.trabajando ? "bg-green-800" : "bg-red-600"
+                    } rounded self-start mt-1 w-auto`}
+                  >
+                    <TextSmall className={"text-white"}>
+                      {dataUser.trabajando ? "Trabajando" : " No trabajando"}
+                    </TextSmall>
+                  </View>
+                )} */}
+
+                {dataUser.trabajando &&
+                  empresaPick &&
+                  empresaPick.id != dataUser.idEmpresaTrabajando && (
+                    <View
+                      className={`p-2 ${
+                        dataUser.trabajando ? "bg-green-800" : "bg-red-600"
+                      } rounded self-start mt-1 w-auto`}
+                    >
+                      <TextSmall className={"text-white"}>
+                        {dataUser.trabajando
+                          ? `Trabajando en ${dataUser.trabajandoPara}`
+                          : " No trabajando"}
+                      </TextSmall>
+                    </View>
+                  )}
                 {empresaPick &&
                   dataUser.trabajando &&
                   dataUser.idEmpresaTrabajando == empresaPick.id && (
@@ -832,7 +863,36 @@ export const calcularTiempoTrabajado = (entrada, salida) => {
 
   return { horas, minutos, segundos };
 };
+export function haversineDistanceNew([lat1, lon1], [lat2, lon2]) {
+  const R = 6371000; // Radio de la Tierra en metros
+  const toRad = (value) => (value * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distancia en metros
+}
 
-// console.log(
-//   `Horas: ${tiempoTrabajado.horas}, Minutos: ${tiempoTrabajado.minutos}, Segundos: ${tiempoTrabajado.segundos}`
-// );
+export const TabMenu = () => {
+  const router = useRouter();
+  const { setEmpresaPick, empresaPick } = useAuthApp();
+  return (
+    <View className="absolute z-50 bottom-10 left-5 flex-row items-center">
+      <Image
+        source={{ uri: empresaPick.logotipoUrl }}
+        style={{ width: 80, height: 80, borderRadius: 15 }}
+      />
+      <TouchableOpacity
+        className="ml-2 "
+        onPress={() => {
+          setEmpresaPick(null);
+          router.replace("/home/");
+        }}
+      >
+        <MiIcono type="Ionicons" name="home" size={40} />
+      </TouchableOpacity>
+    </View>
+  );
+};

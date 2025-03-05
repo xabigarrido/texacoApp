@@ -8,19 +8,76 @@ import {
   MiInput,
   TextError,
   TextSmall,
-  useWarmUpBrowser,
 } from "@/utils/utils";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { KeyboardAvoidingView, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useColorScheme } from "nativewind";
-import ContainerBotonesGoogleApple from "../../components/ContainerBotonesGoogleApple";
 import { Link, useRouter } from "expo-router";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import { useAuth, useSignIn } from "@clerk/clerk-react";
 import { useApp } from "@/context/appContext";
 import * as WebBrowser from "expo-web-browser";
+import * as AuthSession from "expo-auth-session";
+import { useSSO, useUser } from "@clerk/clerk-expo";
+import { createdUserFirebase } from "@/api/auth.api";
+import { useAuthApp } from "@/context/userContext";
+WebBrowser.maybeCompleteAuthSession();
+
+const useWarmUpBrowser = () => {
+  useEffect(() => {
+    void WebBrowser.warmUpAsync();
+    return () => {
+      void WebBrowser.coolDownAsync();
+    };
+  }, []);
+};
+
+function ContainerBotonesGoogleApple() {
+  useWarmUpBrowser();
+  const { setLoadingData } = useApp();
+  const { startSSOFlow } = useSSO();
+  const { dataUser } = useAuthApp();
+  const router = useRouter();
+
+  const onPress = useCallback(async () => {
+    try {
+      setLoadingData(true);
+      const { createdSessionId, setActive, signIn, signUp } =
+        await startSSOFlow({
+          strategy: "oauth_google",
+        });
+
+      if (createdSessionId) {
+        setActive!({ session: createdSessionId });
+        console.log("Iniciaste sesion");
+        router.replace("/home");
+      } else {
+        console.log("error al iniciar sesion");
+      }
+    } catch (err) {
+      console.error(JSON.stringify(err, null, 2));
+    } finally {
+      setLoadingData(false);
+    }
+  }, []);
+
+  return (
+    <>
+      <BotonIcon
+        className="bg-buttonPrimary w-[80%]"
+        name={"google"}
+        onPress={onPress}
+      >
+        Iniciar sesion con Google
+      </BotonIcon>
+      <BotonIcon className="bg-black w-[80%]" name={"apple1"}>
+        Iniciar sesion con Apple
+      </BotonIcon>
+    </>
+  );
+}
 const LoginAuth = () => {
   const [userLogin, setUserLogin] = useState({ email: "", password: "" });
   return (
