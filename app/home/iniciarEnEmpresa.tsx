@@ -125,7 +125,6 @@ export default function IniciarEnEmpresa() {
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !dataUser) return;
-    if (!dataUser.newUser) return router.replace("/home/start");
     const q = query(collecRefSolicitudes, where("userId", "==", userId));
     const q2 = query(
       collecRefSolicitudes,

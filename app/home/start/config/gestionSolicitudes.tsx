@@ -6,6 +6,7 @@ import {
   MarcoLayout,
   MiInput,
   mostrarAlerta,
+  NewBox,
   TabMenu,
   TextSmall,
 } from "@/utils/utils";
@@ -144,7 +145,7 @@ const gestionSolicitudes = () => {
       <TabMenu />
       <FadeIn>
         <HeaderUser />
-        <Box className={"p-6 m-2"}>
+        <NewBox className={"p-6 m-2"}>
           <View className="items-center">
             <TextSmall className={"text-center text-2xl mb-2"}>
               Tienes {solicitudes.length} solicitudes pendientes
@@ -198,7 +199,7 @@ const gestionSolicitudes = () => {
               </View>
             ))}
           </View>
-        </Box>
+        </NewBox>
       </FadeIn>
     </MarcoLayout>
   );

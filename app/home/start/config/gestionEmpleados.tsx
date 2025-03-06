@@ -4,6 +4,7 @@ import {
   FadeIn,
   HeaderUser,
   MarcoLayout,
+  NewBox,
   TabMenu,
   TextSmall,
 } from "@/utils/utils";
@@ -44,7 +45,7 @@ const GestionEmpleados = () => {
       <TabMenu />
       <FadeIn>
         <HeaderUser />
-        <Box className={"p-6 m-2"}>
+        <NewBox className={"p-6 m-2"}>
           <TextSmall className={"text-center text-xl"}>
             Haz click en los empleados para mas informacion
           </TextSmall>
@@ -84,7 +85,7 @@ const GestionEmpleados = () => {
                 </View>
               </TouchableOpacity>
             ))}
-        </Box>
+        </NewBox>
       </FadeIn>
     </MarcoLayout>
   );

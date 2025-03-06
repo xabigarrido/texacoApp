@@ -23,7 +23,7 @@ export const addEmpresa = async (empresa, dataUser) => {
   if (!existe) {
     const docRef = await addDoc(collecRefEmpresa, empresa);
     const empleadosRef = collection(docRef, "Empleados");
-    await addDoc(empleadosRef, dataUser);
+    await addDoc(empleadosRef, { ...dataUser, encargadoEmpresa: true });
     return docRef.id;
   } else {
     alert("El nombre de la empresa ya esta en uso por favor eliga otro");
@@ -314,5 +314,77 @@ export const addTikadaSinPosicion = async (dataUser, empresaPcik) => {
     }
   } catch (error) {
     console.log(error);
+  }
+};
+
+export const addEncargadoEmpresa = async (idDoc, idEmpresa) => {
+  try {
+    const empleadoRef = doc(db, "Empresas", idEmpresa, "Empleados", idDoc);
+    await updateDoc(empleadoRef, { encargadoEmpresa: true });
+    console.log("Encargado añadido");
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getEmpleadoEmpresa = async (idEmpresa, idEmpleado) => {
+  try {
+    const empleadosRef = collection(db, "Empresas", idEmpresa, "Empleados");
+    const q = query(empleadosRef, where("id", "==", idEmpleado));
+    const empleadoSnap = await getDocs(q);
+    if (empleadoSnap.empty) {
+      return alert("No existe ese empleado");
+    }
+
+    const dataEmpleado = {
+      idDocument: empleadoSnap.docs[0].id,
+      ...empleadoSnap.docs[0].data(),
+    };
+    return dataEmpleado;
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const listarEmpleados = async (idEmpresa) => {
+  try {
+    const empleadosRef = collection(db, "Empresas", idEmpresa, "Empleados");
+    const empleadosSnap = await getDocs(empleadosRef);
+
+    if (empleadosSnap.empty) {
+      console.log("No hay empleados en esta empresa");
+      return;
+    }
+
+    empleadosSnap.forEach((doc) => {
+      console.log("Empleado encontrado:", doc.id, doc.data());
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const obtenerTikadas = async (idUser) => {
+  console.log(idUser);
+  if (!idUser) {
+    return { estado: false, data: "ID de usuario no válido" };
+  }
+
+  try {
+    const q = query(collecRefTikadas, where("idEmpleado", "==", idUser));
+    const docSnaps = await getDocs(q);
+
+    if (docSnaps.empty) {
+      return { estado: false, data: "No hay tikadas de este empleado" };
+    }
+
+    const dataTikadas = docSnaps.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return { estado: true, data: dataTikadas };
+  } catch (error) {
+    console.error("Error obteniendo tikadas:", error);
+    return { estado: false, data: error.message };
   }
 };

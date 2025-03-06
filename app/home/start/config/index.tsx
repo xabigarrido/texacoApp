@@ -8,6 +8,7 @@ import {
   HeaderUser,
   MarcoLayout,
   MiIcono,
+  NewBox,
   TabMenu,
   TextSmall,
 } from "@/utils/utils";
@@ -61,7 +62,7 @@ const AdminEmpresa = () => {
       <TabMenu />
       <FadeIn>
         <HeaderUser />
-        <Box className={"my-2 w-[80%] py-3"}>
+        <NewBox className={"my-2 w-[80%] py-3"}>
           <TextSmall className={"text-center font-bold text-3xl"}>
             Administracion de {empresaPick.nameEmpresa}
           </TextSmall>
@@ -74,8 +75,8 @@ const AdminEmpresa = () => {
           <TextSmall className={"text-center"}>
             Código emparejamiento de empleados
           </TextSmall>
-        </Box>
-        <Box className={"p-6 m-2"}>
+        </NewBox>
+        <NewBox className={"p-6 m-2"}>
           <View className="items-center justify-center mt-2">
             <View className="flex-row items-center gap-1">
               <BotonesAdmin
@@ -122,7 +123,7 @@ const AdminEmpresa = () => {
               size={40}
             />
           </View>
-        </Box>
+        </NewBox>
       </FadeIn>
     </MarcoLayout>
   );

@@ -8,6 +8,8 @@ import {
   EstadoTrabajando,
   HeaderUser,
   MarcoLayout,
+  MiIcono,
+  NewBox,
   TextSmall,
 } from "@/utils/utils";
 import { useRouter } from "expo-router";
@@ -38,7 +40,7 @@ const pickEmpresas = React.memo(() => {
     getData();
     setEmpresaPick(null);
     setLoadingData(false);
-    if (dataUser.newUser) return router.replace("/home/");
+    // if (dataUser.newUser) return router.replace("/home/");
   }, [dataUser, empresaPick]);
   const handleButtons = async () => {
     try {
@@ -51,7 +53,19 @@ const pickEmpresas = React.memo(() => {
     <MarcoLayout darkMode={true}>
       <View className="items-center">
         <HeaderUser dataUser={dataUser} />
-        <Box className={"p-3 mt-2 items-center justify-center"}>
+        <NewBox className={""}>
+          <View className="absolute top-2 right-2">
+            <TouchableOpacity
+              onPress={() => router.navigate("/home/crearEmpresa")}
+            >
+              <MiIcono
+                name="add-circle"
+                type="Ionicons"
+                color="green"
+                size={36}
+              />
+            </TouchableOpacity>
+          </View>
           {empresas.length == 0 &&
             !dataUser.newUser &&
             dataUser.empresasPostuladas.length > 0 && (
@@ -92,7 +106,7 @@ const pickEmpresas = React.memo(() => {
               </Boton>
             </View>
           )}
-        </Box>
+        </NewBox>
       </View>
     </MarcoLayout>
   );

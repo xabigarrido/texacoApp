@@ -34,7 +34,7 @@ export default function ContainerBotonesGoogleApple() {
         await startSSOFlow({
           strategy: "oauth_google",
         });
-
+      router.replace("/home/start");
       if (createdSessionId) {
         setActive!({ session: createdSessionId });
       } else {

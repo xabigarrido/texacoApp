@@ -5,16 +5,19 @@ import {
   BotonIcon,
   BotonIconSize,
   Box,
+  Etiqueta,
   FadeIn,
   FadeInSinInputs,
   MarcoLayout,
+  MarcoLayoutSinDismiss,
   MiIcono,
+  NewBox,
   ScaleAnimation,
   TextSmall,
 } from "@/utils/utils";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 const FirstHome = () => {
   const { userId, isLoaded, signOut, dataUser, isSignedIn } = useAuthApp();
@@ -28,22 +31,27 @@ const FirstHome = () => {
     if (!dataUser.newUser) return router.replace("/home/start");
   }, [isLoaded, isSignedIn, dataUser]);
   return (
-    <MarcoLayout className={"justify-center items-center"} darkMode={true}>
-      <FadeInSinInputs duration={2000}>
-        {dataUser.newUser && (
-          <>
-            {!verMasEmpresa && (
-              <HeaderPrimeraVez dataUser={dataUser} signOut={signOut} />
-            )}
+    <MarcoLayoutSinDismiss
+      className={"justify-center items-center"}
+      darkMode={true}
+    >
+      <ScrollView>
+        <FadeInSinInputs duration={2000}>
+          {dataUser.newUser && (
+            <>
+              {!verMasEmpresa && (
+                <HeaderPrimeraVez dataUser={dataUser} signOut={signOut} />
+              )}
 
-            <PrimeraVez
-              setVerMasEmpresa={setVerMasEmpresa}
-              verMasEmpresa={verMasEmpresa}
-            />
-          </>
-        )}
-      </FadeInSinInputs>
-    </MarcoLayout>
+              <PrimeraVez
+                setVerMasEmpresa={setVerMasEmpresa}
+                verMasEmpresa={verMasEmpresa}
+              />
+            </>
+          )}
+        </FadeInSinInputs>
+      </ScrollView>
+    </MarcoLayoutSinDismiss>
   );
 };
 const PrimeraVez = ({ verMasEmpresa, setVerMasEmpresa }) => {
@@ -64,7 +72,7 @@ const CrearEntorno = ({ setVerMasEmpresa, verMasEmpresa }) => {
   const router = useRouter();
   return (
     <FadeInSinInputs duration={1300}>
-      <View className="w-full p-1 mt-2">
+      <NewBox>
         <View className="bg-navbarBackground dark:bg-dark-navbarBackground rounded-xl p-3">
           <View className="flex-row px-1 py-2 bg-white rounded-full border border-gray-200 absolute right-0 z-50 -top-5 dark:bg-dark-navbarBackground dark:border-0">
             <View className="absolute z-50 -left-2">
@@ -181,15 +189,15 @@ const CrearEntorno = ({ setVerMasEmpresa, verMasEmpresa }) => {
             Registrar Empresa
           </Boton>
         </View>
-      </View>
+      </NewBox>
     </FadeInSinInputs>
   );
 };
 const IniciarEmpresa = () => {
   const router = useRouter();
   return (
-    <View className="w-full p-1">
-      <View className="bg-navbarBackground dark:bg-dark-navbarBackground rounded-xl p-3">
+    <NewBox>
+      <View className="bg-navbarBackground dark:bg-dark-navbarBackground rounded-xl p-2">
         <View className="flex-row gap-2 px-1 py-2 bg-white rounded-full border border-gray-200 absolute right-0 -top-5 dark:bg-dark-navbarBackground dark:border-0">
           <View className="absolute -left-8 top-10 py-2 px-2 bg-white rounded-full border border-gray-200 dark:bg-dark-navbarBackground dark:border-0">
             <MiIcono type="Ionicons" name="person" size={38} color="#5194ff" />
@@ -289,43 +297,63 @@ const IniciarEmpresa = () => {
           Iniciar en una empresa
         </Boton>
       </View>
-    </View>
+    </NewBox>
   );
 };
 
 const HeaderPrimeraVez = ({ dataUser, signOut }) => {
   const router = useRouter();
   return (
-    <Box
-      className={"mb-2 rounded-xl flex-row justify-around items-center py-2"}
-    >
-      <View>
-        <TextSmall className={"text-3xl font-bold"}>Bienvenido/a</TextSmall>
-        <TextSmall className={"text-xl"}>
-          {dataUser.name} {dataUser.subname}
-        </TextSmall>
-        <BotonIconSize
-          onPress={async () => {
-            await signOut();
-            router.replace("/Auth/LoginAuth");
-          }}
-          className="bg-red-400 px-2 py-1"
-          type="FontAwesome"
-          name="sign-out"
-        >
-          Desconectar
-        </BotonIconSize>
+    <View style={{ paddingTop: 85, width: "100%" }}>
+      <View style={{ position: "absolute", right: 5, top: 5 }}>
+        <TouchableOpacity onPress={() => router.replace("/home/start/")}>
+          <View className="py-3 px-4 bg-white dark:bg-dark-navbarBackground rounded-full justify-center items-center">
+            <MiIcono size={32} name="dashboard" type="MaterialIcons" />
+            <TextSmall>Menu</TextSmall>
+          </View>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity
-        onPress={async () => {
-          await updateUser(dataUser.id, { newUser: false });
-        }}
-      >
-        <Image
-          source={{ uri: dataUser.imageUrl }}
-          style={{ width: 80, height: 80, borderRadius: 25 }}
-        />
-      </TouchableOpacity>
-    </Box>
+      <NewBox ancho={false} paddingHandle={false} noExpandir={false}>
+        <View style={{ position: "absolute", right: -10, top: -10 }}>
+          <TouchableOpacity
+            onPress={async () => {
+              await signOut();
+              router.replace("/Auth/LoginAuth");
+            }}
+          >
+            <View className=" bg-red-400 rounded-full p-1">
+              <MiIcono name="logout" size={20} color="white" />
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View
+          style={{ position: "absolute", top: -85 }}
+          className="self-center"
+        >
+          <Image
+            source={{ uri: dataUser?.imageUrl }}
+            style={{
+              width: 100,
+              height: 100,
+              borderRadius: 50, // Hace que la imagen sea circular
+              borderWidth: 3, // Borde para resaltar
+              borderColor: "#fff", // Borde blanco para contraste
+              shadowColor: "#000", // Color de la sombra
+              shadowOffset: { width: 0, height: 4 }, // Desplazamiento
+              shadowOpacity: 0.3, // Opacidad de la sombra
+              shadowRadius: 6, // Difusión para suavizar
+              elevation: 6, // Sombra en Android
+              backgroundColor: "#fff", // Fallback en caso de que no cargue la imagen
+            }}
+          />
+        </View>
+
+        <View>
+          <TextSmall className={"text-2xl font-extrabold text-center"}>
+            {`${dataUser?.name} ${dataUser?.subname}`}
+          </TextSmall>
+        </View>
+      </NewBox>
+    </View>
   );
 };

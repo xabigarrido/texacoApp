@@ -32,18 +32,23 @@ import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import Feather from "@expo/vector-icons/Feather";
 import { useApp } from "@/context/appContext";
 import { useAuthApp } from "@/context/userContext";
+import { Timestamp } from "firebase/firestore";
 import {
+  addTikadaSinPosicion,
+  obtenerEmpresasSolicitud,
+} from "@/api/empresas.api";
+import { useRouter } from "expo-router";
+import {
+  db,
   collection,
   getDocs,
+  onSnapshot,
   query,
-  Timestamp,
   where,
-} from "firebase/firestore";
-import { addTikadaSinPosicion } from "@/api/empresas.api";
-import { useRouter } from "expo-router";
-import { db } from "@/firebaseConfig";
+} from "@/firebaseConfig";
 import { useIsFocused } from "@react-navigation/native";
 import { updateUser } from "@/api/auth.api";
 
@@ -110,6 +115,53 @@ export const MarcoLayout = ({
         </View>
       </View>
     </TouchableWithoutFeedback>
+  );
+};
+export const MarcoLayoutSinDismiss = ({
+  children,
+  className,
+  darkMode = false,
+  classDark = "bottom-3 right-3",
+}) => {
+  const insets = useSafeAreaInsets();
+  const { colorScheme, toggleColorScheme } = useColorScheme();
+  const { loadingData } = useApp();
+  return (
+    <View className="bg-background dark:bg-dark-background">
+      <StatusBar />
+      <View
+        style={{
+          height:
+            Platform.OS === "android"
+              ? heightScreen - insets.bottom
+              : heightScreen - insets.bottom - 10,
+          marginTop: insets.top,
+          alignItems: "center",
+        }}
+        className={className}
+      >
+        {darkMode && (
+          <View className={`absolute z-50 ${classDark}`}>
+            <FadeIn timeOut={1000}>
+              <DarkMode />
+            </FadeIn>
+          </View>
+        )}
+        {loadingData && (
+          <View className="items-center w-full">
+            <Box
+              className={
+                "justify-center items-center h-[100px] w-[90%] rounded-lg"
+              }
+            >
+              <ActivityIndicator size={"large"} />
+              <TextSmall>Cargando</TextSmall>
+            </Box>
+          </View>
+        )}
+        {!loadingData && children}
+      </View>
+    </View>
   );
 };
 export const TextSmall = ({ children, className }) => {
@@ -452,11 +504,12 @@ export const MiIcono = ({
     return <MaterialIcons name={name} size={size} color={color} />;
   } else if (type === "FontAwesome5") {
     return <FontAwesome5 name={name} size={size} color={color} />;
+  } else if (type === "Feather") {
+    return <Feather name={name} size={size} color={color} />;
   } else {
     return null;
   }
 };
-
 export const ScaleAnimation = ({
   children,
   duration = 1000,
@@ -493,8 +546,39 @@ export const AnimationRotation = ({
   });
   return <Animated.View style={[animatedStyle]}>{children}</Animated.View>;
 };
+export const NewBox = ({
+  children,
+  ancho = true,
+  paddingHandle = true,
+  noExpandir = true,
+}) => {
+  return (
+    <View
+      style={{
+        // backgroundColor: "white", // Necesario para que la sombra sea visible
+        // padding: 20,
+        // borderRadius: 10,
+        shadowColor: "#000", // Color de la sombra
+        shadowOffset: { width: 0, height: 4 }, // Desplazamiento
+        shadowOpacity: 0.3, // Opacidad de la sombra
+        shadowRadius: 4, // Difusión de la sombra
+        elevation: 20, // Requerido para Androi
+        width: ancho ? "98%" : "auto",
+        paddingBottom: paddingHandle ? 32 : 10,
+        marginBottom: 10,
+        alignSelf: noExpandir ? "" : "center",
+      }}
+      className={
+        "p-4 bg-cardBackground dark:bg-dark-cardBackground rounded-2xl"
+      }
+    >
+      {children}
+    </View>
+  );
+};
 export const HeaderUser = React.memo(() => {
-  const { dataUser, empresaPick } = useAuthApp();
+  const { dataUser, empresaPick, setEmpresaPick } = useAuthApp();
+  const [invitaciones, setInvitaciones] = useState([]);
   const [datosTikada, setDatosTikada] = useState({
     horaEntrada: "No disponible",
     tiempoTrabajado: { horas: 0, minutos: 0 },
@@ -502,7 +586,15 @@ export const HeaderUser = React.memo(() => {
   const isFocus = useIsFocused();
   const router = useRouter();
 
+  function obtenerHoraActual() {
+    const ahora = new Date();
+    const horas = ahora.getHours().toString().padStart(2, "0");
+    const minutos = ahora.getMinutes().toString().padStart(2, "0");
+
+    return { hora: `${horas}:${minutos}` };
+  }
   useEffect(() => {
+    const horaActual = obtenerHoraActual();
     if (!dataUser) return;
     const getTikada = async () => {
       try {
@@ -527,13 +619,13 @@ export const HeaderUser = React.memo(() => {
             });
           } else {
             setDatosTikada({
-              horaEntrada: "No disponible",
+              horaEntrada: horaActual.hora,
               tiempoTrabajado: { horas: 0, minutos: 0 },
             });
           }
         } else {
           setDatosTikada({
-            horaEntrada: "No disponible",
+            horaEntrada: horaActual.hora,
             tiempoTrabajado: { horas: 0, minutos: 0 },
           });
         }
@@ -541,215 +633,160 @@ export const HeaderUser = React.memo(() => {
         console.log("Error obteniendo datos:", error);
       }
     };
-    console.log(empresaPick);
     getTikada();
-  }, [isFocus]);
+  }, [isFocus, dataUser]);
 
+  useEffect(() => {
+    const q2 = query(
+      collection(db, "Solicitudes"),
+      where("enviarA", "==", dataUser.emailAddress)
+    );
+    const unsuscribe2 = onSnapshot(q2, (snapshot) => {
+      const data2 = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setInvitaciones(data2);
+    });
+    return () => unsuscribe2();
+  }, []);
   return (
-    <Box className={"p-3"}>
-      <View className="flex-row justify-around items-center ">
-        <View className="flex-1">
-          <TextSmall className={"text-2xl font-medium"}>
-            {dataUser.name} {dataUser?.subname}
-            {empresaPick && (
-              <>
-                <TextSmall> estas en </TextSmall>
-                <TextSmall
-                  className={"text-blue-700 dark:text-blue-400 font-bold"}
-                >
-                  {empresaPick.nameEmpresa}
-                </TextSmall>
-              </>
-            )}
-          </TextSmall>
-          <View className="flex-row gap-2">
-            <>
-              <View className="flex-row gap-2">
-                {dataUser.trabajando && !empresaPick && (
-                  <View
-                    className={`p-2 ${
-                      dataUser.trabajando ? "bg-green-800" : "bg-red-600"
-                    } rounded self-start mt-1 w-auto`}
-                  >
-                    <TextSmall className={"text-white"}>
-                      {dataUser.trabajando
-                        ? `Trabajando en ${dataUser.trabajandoPara}`
-                        : " No trabajando"}
-                    </TextSmall>
-                  </View>
-                )}
-                {/* {dataUser.trabajando && empresaPick && (
-                  <View
-                    className={`p-2 ${
-                      dataUser.trabajando ? "bg-green-800" : "bg-red-600"
-                    } rounded self-start mt-1 w-auto`}
-                  >
-                    <TextSmall className={"text-white"}>
-                      {dataUser.trabajando ? "Trabajando" : " No trabajando"}
-                    </TextSmall>
-                  </View>
-                )} */}
-
-                {dataUser.trabajando &&
-                  empresaPick &&
-                  empresaPick.id != dataUser.idEmpresaTrabajando && (
-                    <View
-                      className={`p-2 ${
-                        dataUser.trabajando ? "bg-green-800" : "bg-red-600"
-                      } rounded self-start mt-1 w-auto`}
-                    >
-                      <TextSmall className={"text-white"}>
-                        {dataUser.trabajando
-                          ? `Trabajando en ${dataUser.trabajandoPara}`
-                          : " No trabajando"}
-                      </TextSmall>
-                    </View>
-                  )}
-                {empresaPick &&
-                  dataUser.trabajando &&
-                  dataUser.idEmpresaTrabajando == empresaPick.id && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (!empresaPick.posicionHabilitada) {
-                          addTikadaSinPosicion(dataUser, empresaPick);
-                        } else {
-                          router.replace("/home/start/tikadaMaps");
-                        }
-                      }}
-                    >
-                      <View
-                        className={`p-2 ${
-                          dataUser.trabajando ? "bg-red-600" : "bg-green-800"
-                        } rounded self-start mt-1 w-auto`}
-                      >
-                        <TextSmall className={"text-white"}>
-                          {dataUser.trabajando
-                            ? "Salir del turno ahora"
-                            : "Iniciar turno ahora"}
-                        </TextSmall>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                {empresaPick && !dataUser.trabajando && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (!empresaPick.posicionHabilitada) {
-                        addTikadaSinPosicion(dataUser, empresaPick);
-                      } else {
-                        router.replace("/home/start/tikadaMaps");
-                      }
-                    }}
-                  >
-                    <View
-                      className={`p-2 ${
-                        dataUser.trabajando ? "bg-red-600" : "bg-green-800"
-                      } rounded self-start mt-1 w-auto`}
-                    >
-                      <TextSmall className={"text-white"}>
-                        {dataUser.trabajando
-                          ? "Salir del turno ahora"
-                          : "Iniciar turno ahora"}
-                      </TextSmall>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                {/* {empresaPick ? (
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (!empresaPick.posicionHabilitada) {
-                        addTikadaSinPosicion(dataUser, empresaPick);
-                      } else {
-                        router.replace("/home/start/tikadaMaps");
-                      }
-                    }}
-                  >
-                    <View
-                      className={`p-2 ${
-                        dataUser.trabajando ? "bg-red-600" : "bg-green-800"
-                      } rounded self-start mt-1 w-auto`}
-                    >
-                      <TextSmall className={"text-white"}>
-                        {dataUser.trabajando
-                          ? "Salir del turno ahora"
-                          : "Iniciar turno ahora"}
-                      </TextSmall>
-                    </View>
-                  </TouchableOpacity>
-                ) : (
-                  empresaPick &&
-                  dataUser.trabajando &&
-                  dataUser.idEmpresaTrabajando == empresaPick.id && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        addTikadaSinPosicion(dataUser, {
-                          id: dataUser?.idEmpresaTrabajando,
-                        });
-                      }}
-                    >
-                      <View
-                        className={`p-2 ${
-                          dataUser.trabajando ? "bg-red-600" : "bg-green-800"
-                        } rounded self-start mt-1 w-auto`}
-                      >
-                        <TextSmall className={"text-white"}>
-                          {dataUser.trabajando
-                            ? "Salir del turno ahora"
-                            : "Iniciar turno ahora"}
-                        </TextSmall>
-                      </View>
-                    </TouchableOpacity>
-                  )
-                )} */}
-              </View>
-            </>
-          </View>
-
-          {dataUser.trabajando && (
-            <>
-              <View className="flex-row gap-2">
-                <View
-                  className={`p-2 bg-green-800 rounded self-start mt-1 w-auto`}
-                >
-                  <TextSmall className={"text-white"}>Entrada</TextSmall>
-                </View>
-                <View className={`p-2  rounded self-start mt-1 w-auto`}>
-                  <TextSmall className={"font-sans font-semibold"}>
-                    {datosTikada.horaEntrada}
-                  </TextSmall>
-                </View>
-              </View>
-              <View className="flex-row gap-2">
-                <View
-                  className={`p-2 bg-violet-800 rounded self-start mt-1 w-auto`}
-                >
-                  <TextSmall className={"text-white"}>
-                    Tiempo trabajado
-                  </TextSmall>
-                </View>
-                <View className={`p-2  rounded self-start mt-1 w-auto`}>
-                  <TextSmall className={"font-sans font-semibold"}>
-                    {datosTikada.tiempoTrabajado.horas} h{" "}
-                    {datosTikada.tiempoTrabajado.minutos} min
-                  </TextSmall>
-                </View>
-              </View>
-            </>
+    <View
+      style={{
+        // backgroundColor: "white", // Necesario para que la sombra sea visible
+        // padding: 20,
+        // borderRadius: 10,
+        shadowColor: "#000", // Color de la sombra
+        shadowOffset: { width: 0, height: 4 }, // Desplazamiento
+        shadowOpacity: 0.3, // Opacidad de la sombra
+        shadowRadius: 4, // Difusión de la sombra
+        elevation: 20, // Requerido para Androi
+        width: "98%",
+        paddingBottom: 32,
+        marginBottom: 10,
+      }}
+      className={
+        "p-4 bg-cardBackground dark:bg-dark-cardBackground rounded-2xl"
+      }
+    >
+      <View className="flex-row items-center justify-around">
+        <View className="gap-2">
+          <TouchableOpacity
+            onPress={async () => {
+              await updateUser(dataUser.id, { newUser: true });
+            }}
+          >
+            <Image
+              source={{ uri: dataUser.imageUrl }}
+              style={{ width: 80, height: 80, borderRadius: 15 }}
+            />
+          </TouchableOpacity>
+          {dataUser?.trabajando && datosTikada && (
+            <View className="flex-row justify-center items-center">
+              <MiIcono type="Ionicons" name="enter" color="#007226" size={30} />
+              <TextSmall className={"text-center text-lg "}>
+                {datosTikada.horaEntrada}
+              </TextSmall>
+            </View>
           )}
         </View>
-        <TouchableOpacity
-          onPress={async () => {
-            await updateUser(dataUser.id, { newUser: true });
-          }}
-        >
-          <Image
-            source={{ uri: dataUser.imageUrl }}
-            style={{ width: 80, height: 80, borderRadius: 15 }}
-          />
-        </TouchableOpacity>
+        <View className="self-start gap-1">
+          {dataUser?.trabajando && (
+            <Etiqueta className={"bg-violet-800"}>
+              Trabajando en {dataUser?.trabajandoPara}
+            </Etiqueta>
+          )}
+          {!dataUser?.trabajando && (
+            <Etiqueta className={"bg-violet-800"}>No trabajando</Etiqueta>
+          )}
+          {!empresaPick && (
+            <TouchableOpacity
+              onPress={() => router.navigate("/home/iniciarEnEmpresa")}
+            >
+              <Etiqueta className={"bg-green-800"}>
+                Invitaciones {invitaciones.length}
+              </Etiqueta>
+            </TouchableOpacity>
+          )}
+          {!dataUser?.trabajando && empresaPick && (
+            <TouchableOpacity
+              onPress={() => {
+                if (!empresaPick.posicionHabilitada) {
+                  addTikadaSinPosicion(dataUser, empresaPick);
+                } else {
+                  router.replace("/home/start/tikadaMaps");
+                }
+              }}
+            >
+              <Etiqueta className={"bg-green-800"}>Iniciar turno</Etiqueta>
+            </TouchableOpacity>
+          )}
+          {dataUser?.trabajando &&
+            empresaPick &&
+            dataUser?.idEmpresaTrabajando == empresaPick.id && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (!empresaPick.posicionHabilitada) {
+                    addTikadaSinPosicion(dataUser, empresaPick);
+                  } else {
+                    router.replace("/home/start/tikadaMaps");
+                  }
+                }}
+              >
+                <Etiqueta className={"bg-red-800"}>Salir del turno</Etiqueta>
+              </TouchableOpacity>
+            )}
+        </View>
+
+        {empresaPick && (
+          <View className="items-center">
+            {dataUser?.trabajando && (
+              <View className="flex-row ml-1">
+                <TextSmall className={"text-center text-lg"}>
+                  {`${datosTikada?.tiempoTrabajado.horas}h ${datosTikada?.tiempoTrabajado.minutos} min`}
+                </TextSmall>
+              </View>
+            )}
+            <TouchableOpacity
+              onPress={() => {
+                setEmpresaPick(null);
+                router.replace("/home/");
+              }}
+            >
+              <Image
+                source={{ uri: empresaPick?.logotipoUrl }}
+                style={{ width: 80, height: 80, borderRadius: 15 }}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
-    </Box>
+      <View
+        className="self-center absolute p-2 bg-background dark:bg-dark-background rounded-lg"
+        style={{
+          bottom: -15,
+          shadowColor: "#000", // Color de la sombra
+          shadowOffset: { width: 0, height: 4 }, // Desplazamiento
+          shadowOpacity: 0.3, // Opacidad de la sombra
+          shadowRadius: 4, // Difusión de la sombra
+          elevation: 20, // Requerido para Androi
+          zIndex: 99999999999,
+        }}
+      >
+        <TextSmall className={"text-gray-700 font-sans font-semibold text-lg"}>
+          {dataUser?.name} {dataUser?.subname}
+        </TextSmall>
+      </View>
+    </View>
   );
 });
+export const Etiqueta = ({ children, className }) => {
+  return (
+    <View className={`px-2 py-1 rounded self-start ${className}`}>
+      <TextSmall className={"text-white text-lg"}>{children}</TextSmall>
+    </View>
+  );
+};
 export const BotonesHome = ({ nameBoton, onPress, type, name, color }) => {
   return (
     <TouchableOpacity onPress={onPress}>
@@ -834,8 +871,8 @@ export function formatDistance(distanceMeters) {
   }
 }
 const opciones = {
-  day: "2-digit",
-  month: "short", // "short" para abreviado (ej. "ene"), "long" para completo (ej. "enero")
+  // day: "2-digit",
+  // month: "short", // "short" para abreviado (ej. "ene"), "long" para completo (ej. "enero")
   hour: "2-digit",
   minute: "2-digit",
 };
@@ -880,15 +917,11 @@ export const TabMenu = () => {
   const { setEmpresaPick, empresaPick } = useAuthApp();
   return (
     <View className="absolute z-50 bottom-10 left-5 flex-row items-center">
-      <Image
-        source={{ uri: empresaPick.logotipoUrl }}
-        style={{ width: 80, height: 80, borderRadius: 15 }}
-      />
       <TouchableOpacity
         className="ml-2 "
         onPress={() => {
           setEmpresaPick(null);
-          router.replace("/home/");
+          router.replace("/home/start");
         }}
       >
         <MiIcono type="Ionicons" name="home" size={40} />
@@ -896,3 +929,147 @@ export const TabMenu = () => {
     </View>
   );
 };
+export const formatearFechaFirestore = (timestamp, formato) => {
+  if (!timestamp?.seconds) return "Fecha inválida"; // Validación de la fecha
+
+  // Convertimos el timestamp de Firestore a un objeto Date
+  const date = new Date(timestamp.seconds * 1000); // Convertimos segundos a milisegundos
+
+  // Opciones para formatear la hora
+  const opcionesHora = {
+    hour: "2-digit", // Hora con dos dígitos
+    minute: "2-digit", // Minutos con dos dígitos
+    hour12: false, // Formato 24h
+  };
+
+  // Formateamos la hora por separado
+  const horaFormateada = new Intl.DateTimeFormat("es-ES", opcionesHora).format(
+    date
+  );
+  const [hora, minuto] = horaFormateada.split(":");
+
+  // Lista de días de la semana en español
+  const diasSemana = [
+    "Domingo",
+    "Lunes",
+    "Martes",
+    "Miércoles",
+    "Jueves",
+    "Viernes",
+    "Sábado",
+  ];
+
+  // Mapeo de meses en palabras
+  const mesesCompletos = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ];
+
+  // Mapeo de meses abreviados
+  const mesesDiminutivos = [
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
+  ];
+
+  // Obtenemos el día de la semana, mes, día y año
+  const diaSemana = diasSemana[date.getDay()]; // Día de la semana
+  const dia = date.getDate(); // Día del mes
+  const mes = date.getMonth(); // Mes (0-11)
+  const año = date.getFullYear(); // Año
+
+  // Hacemos que el día de la semana sea mayúscula
+  const diaSemanaMayuscula =
+    diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
+
+  // Condicionales para retornar el formato solicitado
+  switch (formato) {
+    case "hora":
+      return `${hora}:${minuto}`; // Formato de hora
+    case "diaLetra":
+      return diaSemanaMayuscula; // Solo el día de la semana en letra, sin coma ni espacio extra
+    case "diaNumero":
+      return dia.toString().padStart(2, "0"); // Día en número con dos dígitos
+    case "mesNumero":
+      return (mes + 1).toString().padStart(2, "0"); // Mes en número (1-12)
+    case "mesCompleto":
+      return mesesCompletos[mes]; // Mes completo (Enero, Febrero, ...)
+    case "mesDiminutivo":
+      return mesesDiminutivos[mes]; // Mes abreviado (Ene, Feb, ...)
+    case "anio":
+      return año.toString(); // Solo el año
+    case "fechaCompleta":
+      return `${diaSemanaMayuscula} ${dia.toString().padStart(2, "0")}/${(
+        mes + 1
+      )
+        .toString()
+        .padStart(2, "0")} ${año} ${hora}:${minuto}`; // Fecha completa con hora
+    default:
+      return "Formato no válido"; // Si el formato no está en los casos anteriores
+  }
+};
+export const calcularTiempoTrabajadoAdmin = (entrada, salida) => {
+  // Verifica si los valores son timestamps de Firestore y conviértelos a Date si es necesario
+  const entradaDate =
+    entrada instanceof Date ? entrada : new Date(entrada.seconds * 1000); // Si es un timestamp, lo convertimos
+  const salidaDate =
+    salida instanceof Date ? salida : new Date(salida.seconds * 1000); // Si es un timestamp, lo convertimos
+
+  const diferenciaMs = salidaDate - entradaDate; // Diferencia en milisegundos
+  const horas = Math.floor(diferenciaMs / (1000 * 60 * 60));
+  const minutos = Math.floor((diferenciaMs % (1000 * 60 * 60)) / (1000 * 60));
+  const segundos = Math.floor((diferenciaMs % (1000 * 60)) / 1000);
+
+  return `${horas}:${minutos < 10 ? "0" : ""}${minutos}`; // Retorna las horas y minutos, en formato "horas:minutos"
+};
+export function calcularPago(
+  entrada: { seconds: number; nanoseconds: number },
+  salida: { seconds: number; nanoseconds: number },
+  tarifaPorHora: number
+) {
+  // Convertir los timestamps a objetos Date
+  const entradaFecha = new Date(
+    entrada.seconds * 1000 + entrada.nanoseconds / 1e6
+  );
+  const salidaFecha = new Date(
+    salida.seconds * 1000 + salida.nanoseconds / 1e6
+  );
+
+  // Calcular la diferencia en milisegundos
+  const tiempoTrabajadoMS = salidaFecha.getTime() - entradaFecha.getTime();
+  if (tiempoTrabajadoMS < 0) {
+    return "0,00"; // Evita cálculos erróneos si la entrada es mayor a la salida
+  }
+
+  // Convertir a horas
+  const tiempoTrabajadoHoras = tiempoTrabajadoMS / (1000 * 60 * 60);
+  const pagoTotal = tiempoTrabajadoHoras * tarifaPorHora;
+
+  // Separar euros y céntimos
+  const euros = Math.floor(pagoTotal);
+  const centimos = Math.round((pagoTotal - euros) * 100);
+
+  // Asegurar que los céntimos siempre tengan dos dígitos
+  const centimosFormateados = centimos.toString().padStart(2, "0");
+
+  return `${euros},${centimosFormateados}`;
+}

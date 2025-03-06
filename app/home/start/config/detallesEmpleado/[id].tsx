@@ -1,4 +1,4 @@
-import { deleteEmpleadoEmpresa } from "@/api/empresas.api";
+import { addEncargadoEmpresa, deleteEmpleadoEmpresa } from "@/api/empresas.api";
 import { useAuthApp } from "@/context/userContext";
 import { collection, db, doc, getDoc } from "@/firebaseConfig";
 import {
@@ -8,6 +8,7 @@ import {
   HeaderUser,
   MarcoLayout,
   mostrarAlerta,
+  NewBox,
   TextSmall,
 } from "@/utils/utils";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -35,7 +36,7 @@ const AdminEmpresa = () => {
     <MarcoLayout darkMode={true} className={"justify-between"}>
       <FadeIn>
         <HeaderUser />
-        <Box className={"p-6 mt-2 items-center"}>
+        <NewBox className={"p-6 mt-2 items-center"}>
           <View className="items-center">
             <Image
               source={{ uri: empleado.imageUrl }}
@@ -44,41 +45,63 @@ const AdminEmpresa = () => {
             <TextSmall className={"text-xl font-bold"}>
               {empleado.name} {empleado.subname}
             </TextSmall>
+            <TextSmall className={"text-lg font-semibold"}>
+              Incorporacion
+            </TextSmall>
+            <TextSmall className={"text-lg"}>
+              {convertirFecha(empleado.createdAt)}
+            </TextSmall>
+            <View className="justify-center">
+              <TouchableOpacity
+                className="bg-violet-700 px-4 py-2 rounded my-1 self-center"
+                onPress={() => {
+                  router.push("/home/start/config/tikadasEmpleado/" + id);
+                }}
+              >
+                <TextSmall
+                  className={"font-sans font-semibold text-white text-xl"}
+                >
+                  Ver Entradas y Salidas
+                </TextSmall>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="bg-buttonPrimary px-4 py-2 rounded my-1 self-start"
+                onPress={async () => {
+                  await addEncargadoEmpresa(id, empresaPick.id);
+                }}
+              >
+                <TextSmall
+                  className={"font-sans font-semibold text-white text-xl"}
+                >
+                  Asignar puesto encargado
+                </TextSmall>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="bg-red-700 px-4 py-2 rounded my-1 self-center"
+                onPress={async () => {
+                  mostrarAlerta(
+                    "¿Estas Seguro?",
+                    `Deseas eliminar a ${empleado.name}`,
+                    async () => {
+                      await deleteEmpleadoEmpresa(
+                        empleado.id,
+                        empresaPick.id,
+                        id
+                      );
+                      router.replace("/home/start/config/gestionEmpleados");
+                    }
+                  );
+                }}
+              >
+                <TextSmall
+                  className={"font-sans font-semibold text-white text-xl"}
+                >
+                  Eliminar empleado
+                </TextSmall>
+              </TouchableOpacity>
+            </View>
           </View>
-          <TextSmall className={"text-lg font-semibold"}>
-            Incorporacion
-          </TextSmall>
-          <TextSmall className={"text-lg"}>
-            {convertirFecha(empleado.createdAt)}
-          </TextSmall>
-          <TouchableOpacity className="bg-violet-700 px-4 py-2 rounded my-1">
-            <TextSmall className={"font-sans font-semibold text-white text-xl"}>
-              Ver Entradas y salidas
-            </TextSmall>
-          </TouchableOpacity>
-          <TouchableOpacity className="bg-buttonPrimary px-4 py-2 rounded my-1">
-            <TextSmall className={"font-sans font-semibold text-white text-xl"}>
-              Asignar puesto encargado
-            </TextSmall>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="bg-red-700 px-4 py-2 rounded my-1"
-            onPress={async () => {
-              mostrarAlerta(
-                "¿Estas Seguro?",
-                `Deseas eliminar a ${empleado.name}`,
-                async () => {
-                  await deleteEmpleadoEmpresa(empleado.id, empresaPick.id, id);
-                  router.replace("/home/start/config/gestionEmpleados");
-                }
-              );
-            }}
-          >
-            <TextSmall className={"font-sans font-semibold text-white text-xl"}>
-              Eliminar empleado
-            </TextSmall>
-          </TouchableOpacity>
-        </Box>
+        </NewBox>
       </FadeIn>
     </MarcoLayout>
   );
