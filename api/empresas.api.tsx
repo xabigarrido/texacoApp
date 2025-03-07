@@ -1,4 +1,4 @@
-import { arrayUnion } from "firebase/firestore";
+import { arrayUnion, limit, orderBy } from "firebase/firestore";
 import {
   setDoc,
   doc,
@@ -386,5 +386,131 @@ export const obtenerTikadas = async (idUser) => {
   } catch (error) {
     console.error("Error obteniendo tikadas:", error);
     return { estado: false, data: error.message };
+  }
+};
+
+export const addZonaFirebase = async (newZona) => {
+  if (!newZona.idEmpresa) {
+    console.error("Error: idEmpresa es undefined o null");
+    return { success: false, message: "ID de empresa inválido" };
+  }
+
+  try {
+    const zonasRef = collection(db, "Empresas", newZona.idEmpresa, "Zonas");
+
+    const zonasSnap = await getDocs(zonasRef);
+    const addZindex = await getNextZIndex(newZona.idEmpresa);
+    const zonaData = { ...newZona, zIndex: addZindex };
+    await addDoc(zonasRef, zonaData);
+    return { success: true, message: "Zona añadida correctamente" };
+  } catch (error) {
+    console.error("Error al agregar la zona:", error);
+    return { success: false, message: "Error al agregar la zona" };
+  }
+};
+export const addMesaFirebase = async (newMesa, idZona) => {
+  if (!newMesa.idEmpresa) {
+    console.error("Error: idEmpresa es undefined o null");
+    return { success: false, message: "ID de empresa inválido" };
+  }
+
+  try {
+    const mesaRef = collection(db, "Empresas", newMesa.idEmpresa, "Mesas");
+
+    const zonasSnap = await getDocs(mesaRef);
+    const addZindex = await getNextMesasZindex(newMesa.idEmpresa, idZona);
+    const mesaData = { ...newMesa, zIndex: addZindex };
+    await addDoc(mesaRef, mesaData);
+    return { success: true, message: "Mesa añadida correctamente" };
+  } catch (error) {
+    console.error("Error al agregar la mesa:", error);
+    return { success: false, message: "Error al agregar la mesa" };
+  }
+};
+
+const getNextZIndex = async (empresaId) => {
+  const zonasRef = collection(db, "Empresas", empresaId, "Zonas");
+  const q = query(zonasRef, orderBy("zIndex", "desc"), limit(1)); // Obtener la zona con el zIndex más alto
+  const snapshot = await getDocs(q);
+
+  if (!snapshot.empty) {
+    const highestZIndex = snapshot.docs[0].data().zIndex;
+    return highestZIndex + 1;
+  }
+  return 1; // Si no hay zonas, el primer zIndex será 1
+};
+
+export const updateZonaZIndex = async (empresaId, zonaId) => {
+  console.log(empresaId, zonaId);
+  try {
+    const nextZIndex = await getNextZIndex(empresaId);
+    const zonaRef = doc(db, "Empresas", empresaId, "Zonas", zonaId);
+
+    await updateDoc(zonaRef, { zIndex: nextZIndex });
+  } catch (error) {
+    console.error("Error al actualizar el zIndex:", error);
+  }
+};
+
+const getNextMesasZindex = async (empresaId, idZona) => {
+  const zonasRef = collection(db, "Empresas", empresaId, "Mesas");
+
+  const q = query(
+    zonasRef,
+    where("idZona", "==", idZona),
+    orderBy("zIndex", "desc"),
+    limit(1)
+  ); // Obtener la mesa con el zIndex más alto
+  const snapshot = await getDocs(q);
+
+  if (!snapshot.empty) {
+    const highestZIndex = snapshot.docs[0].data().zIndex;
+    return highestZIndex + 1;
+  }
+  return 1; // Si no hay mesas, el primer zIndex será 1
+};
+
+export const updateMesaZindex = async (empresaId, zonaId, idMesa) => {
+  try {
+    const nextZIndex = await getNextMesasZindex(empresaId, zonaId);
+    const mesaRef = doc(db, "Empresas", empresaId, "Mesas", idMesa);
+
+    await updateDoc(mesaRef, { zIndex: nextZIndex });
+  } catch (error) {
+    console.error("Error al actualizar el zIndex:", error);
+  }
+};
+export const updateZonaFirebase = async (idEmpresa, idZona, data) => {
+  try {
+    const zonaRef = doc(db, "Empresas", idEmpresa, "Zonas", idZona);
+    await updateDoc(zonaRef, data);
+    console.log("Zona actualizada");
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const updateMesaFirebase = async (idEmpresa, idMesa, data) => {
+  try {
+    const mesaRef = doc(db, "Empresas", idEmpresa, "Mesas", idMesa);
+    await updateDoc(mesaRef, data);
+    console.log("Mesa actualizada");
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const addCategoryEmpresa = async (idEmpresa, dataCategory) => {
+  try {
+    const categoryEmpresaRef = collection(
+      db,
+      "Empresas",
+      idEmpresa,
+      "Categorias"
+    );
+    await addDoc(categoryEmpresaRef, dataCategory);
+    console.log("Categoria agregada");
+  } catch (error) {
+    console.log(error);
   }
 };

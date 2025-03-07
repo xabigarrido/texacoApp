@@ -16,16 +16,23 @@ import React, { useEffect, useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
 const OptionsEmpresa = () => {
-  const { empresaPick, dataUser, setEmpresaPick, userId } = useAuthApp();
-  const [dataEmpleado, setDataEmpleado] = useState(null);
+  const {
+    empresaPick,
+    dataUser,
+    setEmpresaPick,
+    userId,
+    setEmpleadoEmpresa,
+    empleadoEmpresa,
+  } = useAuthApp();
+
   const router = useRouter();
 
   useEffect(() => {
-    if (!empresaPick?.id || !userId) return; // Verificamos que existan valores sssssssssss
+    if (!empresaPick?.id || !userId) return; // Verificamos que existan valores
     const getData = async () => {
       try {
         const data = await getEmpleadoEmpresa(empresaPick.id, userId);
-        setDataEmpleado(data);
+        setEmpleadoEmpresa(data);
       } catch (error) {
         console.log(error);
       }
@@ -41,11 +48,11 @@ const OptionsEmpresa = () => {
       </FadeIn>
       <FadeIn>
         <NewBox>
-          {dataEmpleado?.encargadoEmpresa && (
+          {empleadoEmpresa?.encargadoEmpresa && (
             <TouchableOpacity
               onPress={() => router.navigate("/home/start/config")}
             >
-              <View style={{ position: "absolute", right: 10, top: 5 }}>
+              <View style={{ position: "absolute", right: -10, top: -30 }}>
                 <MiIcono size={36} type="Ionicons" name="settings" />
               </View>
             </TouchableOpacity>
@@ -56,13 +63,22 @@ const OptionsEmpresa = () => {
               name={"tablet-dashboard"}
               type={"MaterialCommunityIcons"}
               nameBoton={"Zonas"}
-              color={"#2094bc"}
+              color={"#3B82F6"}
+            />
+            <BotonesHome
+              onPress={() =>
+                router.navigate("/home/start/config/crearZonaPrueba")
+              }
+              name={"tablet"}
+              type={"MaterialCommunityIcons"}
+              nameBoton={"Pruebas"}
+              color={"#10B981"}
             />
             <BotonesHome
               name={"calendar"}
               type={"Ionicons"}
               nameBoton={"Reservas"}
-              color={"#bc2069"}
+              color={"#EF4444"}
             />
           </View>
         </NewBox>

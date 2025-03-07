@@ -109,9 +109,10 @@ const AdminEmpresa = () => {
             />
 
             <BotonesAdmin
-              name={"tablet-dashboard"}
-              type={"MaterialCommunityIcons"}
-              nameBoton={"Gestion Zonas"}
+              onPress={() => router.push("/home/start/config/crearCategoria")}
+              name={"th-list"}
+              type={"FontAwesome"}
+              nameBoton={"Gestion Categorias"}
               color={"#2094bc"}
               size={40}
             />

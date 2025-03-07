@@ -32,7 +32,8 @@ import { Image, TouchableOpacity, View } from "react-native";
 
 export default function IniciarEnEmpresa() {
   const router = useRouter();
-  const { userId, isLoaded, signOut, dataUser, isSignedIn } = useAuthApp();
+  const { userId, isLoaded, signOut, dataUser, isSignedIn, setEmpresaPick } =
+    useAuthApp();
   const [identificador, setIdentificador] = useState("");
   const [empresasPostuladas, setEmpresasPostuladas] = useState([]);
   const [empresasSolicitudes, setEmpresasSolicitudes] = useState([]);
@@ -248,7 +249,10 @@ export default function IniciarEnEmpresa() {
         </View>
         <Boton
           className="bg-buttonPrimary w-[50%] items-center my-2"
-          onPress={() => router.replace("/home/")}
+          onPress={() => {
+            setEmpresaPick(null);
+            router.replace("/home/start");
+          }}
         >
           Volver atras
         </Boton>

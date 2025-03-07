@@ -19,6 +19,8 @@ interface AuthContextType {
   setDataUser: React.Dispatch<React.SetStateAction<any>>;
   empresaPick: any;
   setEmpresaPick: React.Dispatch<React.SetStateAction<any>>;
+  empleadoEmpresa: any;
+  setEmpleadoEmpresa: React.Dispatch<React.SetStateAction<any>>;
   fetchUserData: () => Promise<void>;
 }
 
@@ -42,6 +44,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const { user } = useUser();
   const [dataUser, setDataUser] = useState<any>(false);
   const [empresaPick, setEmpresaPick] = useState<any>(null);
+  const [empleadoEmpresa, setEmpleadoEmpresa] = useState<any>(null);
   const { setLoadingData, loadingData } = useApp();
 
   useEffect(() => {
@@ -101,6 +104,8 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         fetchUserData,
         empresaPick,
         setEmpresaPick,
+        empleadoEmpresa,
+        setEmpleadoEmpresa,
       }}
     >
       {children}

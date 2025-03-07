@@ -24,6 +24,8 @@ const pickEmpresas = React.memo(() => {
     dataUser,
     setEmpresaPick,
     empresaPick,
+    setEmpleadoEmpresa,
+    empleadoEmpresa,
   } = useAuthApp();
   const [empresas, setEmpresas] = useState([]);
   const router = useRouter();
@@ -33,6 +35,7 @@ const pickEmpresas = React.memo(() => {
 
     if (!isLoaded) return;
     if (!isSignedIn) return;
+
     const getData = async () => {
       const data = await verEmpresas(dataUser.empresasPostuladas);
       return setEmpresas(data.message);
@@ -40,8 +43,9 @@ const pickEmpresas = React.memo(() => {
     getData();
     setEmpresaPick(null);
     setLoadingData(false);
+    setEmpleadoEmpresa(null);
     // if (dataUser.newUser) return router.replace("/home/");
-  }, [dataUser, empresaPick]);
+  }, [dataUser, empresaPick, empleadoEmpresa]);
   const handleButtons = async () => {
     try {
       await updateUser(userId, { newUser: true });
@@ -56,7 +60,7 @@ const pickEmpresas = React.memo(() => {
         <NewBox className={""}>
           <View className="absolute top-2 right-2">
             <TouchableOpacity
-              onPress={() => router.navigate("/home/crearEmpresa")}
+              onPress={() => router.replace("/home/crearEmpresa")}
             >
               <MiIcono
                 name="add-circle"

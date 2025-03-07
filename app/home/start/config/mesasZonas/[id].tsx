@@ -41,8 +41,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { useAuthApp } from "@/context/userContext";
 import {
+  addMesaFirebase,
   addZonaFirebase,
-  updateZonaFirebase,
+  updateMesaFirebase,
+  updateMesaZindex,
   updateZonaZIndex,
 } from "@/api/empresas.api";
 import {
@@ -50,14 +52,17 @@ import {
   db,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
+  query,
   updateDoc,
+  where,
 } from "@/firebaseConfig";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 const { height: heightScreen, width: widthScreen } = Dimensions.get("window");
 
-const DibujarZonas = React.memo(
+const DibujarMesas = React.memo(
   ({
     id,
     initialX,
@@ -66,13 +71,14 @@ const DibujarZonas = React.memo(
     height,
     color,
     zIndex,
-    nameZona,
+    nameMesa,
     rotate,
     scale,
     eneabledMove,
+    idZona,
     setModalOpen,
-    setEditZona,
-    setZonaConfig,
+    setMesaConfig,
+    setEditMesa,
   }) => {
     const { empresaPick, empleadoEmpresa } = useAuthApp();
     const translateX = useSharedValue(initialX * widthScreen);
@@ -88,21 +94,21 @@ const DibujarZonas = React.memo(
     const [gestureEneabled, setGestureEneabled] = useState(true);
     const router = useRouter();
     const navigateToZone = (id) => {
-      router.navigate("/home/start/config/mesasZonas/" + id);
+      console.log(id);
+      router.navigate("/home/start/config/agregarComanda/" + id);
     };
     useEffect(() => {
-      console.log("Zona renderizada", id);
+      console.log("Mesa renderizada", id);
       translateX.value = withSpring(initialX * widthScreen);
       translateY.value = withSpring(initialY * heightScreen);
       scaleBox.value = withSpring(scale);
       rotateRad.value = withSpring(rotate);
       zIndexNow.value = zIndex;
-    }, [initialX, initialY, rotate, scale, zIndex, color, width, height]);
-    const collecRef = collection(db, "Mesitas");
-    const updateZona = useCallback(async (id, x, y, rotate, scale) => {
+    }, [initialX, initialY, rotate, scale, zIndex]);
+    const updateMesa = useCallback(async (id, x, y, rotate, scale) => {
       try {
-        const zonaRef = doc(db, "Empresas", empresaPick.id, "Zonas", id);
-        await updateDoc(zonaRef, {
+        const mesaRef = doc(db, "Empresas", empresaPick.id, "Mesas", id);
+        await updateDoc(mesaRef, {
           initialX: x,
           initialY: y,
           rotate,
@@ -215,12 +221,6 @@ const DibujarZonas = React.memo(
           ? { top: 5, left: 5, bottom: 5, right: 5 }
           : { top: 20, left: 20, bottom: 20, right: 20 }
       );
-    const longPress = Gesture.LongPress().onStart(() => {
-      console.log("pulsaste demasiado");
-      runOnJS(setModalOpen)(true);
-      runOnJS(setEditZona)(true);
-      runOnJS(setZonaConfig)({ id, width, height, color, nameZona, scale });
-    });
     const tapGesture = Gesture.Tap()
       .onTouchesDown(() => {
         if (!eneabledMove) {
@@ -230,31 +230,32 @@ const DibujarZonas = React.memo(
       })
       .numberOfTaps(2)
       .onEnd(() => {
-        console.log("doble Tap");
-
-        runOnJS(setModalOpen)(true);
-        runOnJS(setEditZona)(true);
-        runOnJS(setZonaConfig)({ id, width, height, color, nameZona, scale });
+        if (empleadoEmpresa.encargadoEmpresa && eneabledMove) {
+          runOnJS(setModalOpen)(true);
+          runOnJS(setEditMesa)(true);
+          runOnJS(setMesaConfig)({ id, width, height, color, nameMesa, scale });
+        } else {
+          console.log("no eres jefe");
+        }
       });
     const gestureFinish = Gesture.Pan()
       .enabled(eneabledMove)
       .onFinalize(() => {
         zonaSelected.value = 0;
-        runOnJS(updateZona)(
+        runOnJS(updateMesa)(
           id,
           translateX.value / widthScreen,
           translateY.value / heightScreen,
           rotateRad.value,
           scaleBox.value
         );
-        runOnJS(updateZonaZIndex)(empresaPick.id, id);
+        runOnJS(updateMesaZindex)(empresaPick.id, idZona, id);
       });
     const gestureCombined = Gesture.Simultaneous(
       panGesture,
       rotateGesture,
       pinchGesture,
       tapGesture,
-      longPress,
       gestureFinish
     );
     return (
@@ -276,7 +277,7 @@ const DibujarZonas = React.memo(
                 style={[animatedText]}
                 className={"text-white font-sans font-bold"}
               >
-                {nameZona}
+                {nameMesa}
               </Animated.Text>
             </Animated.View>
           </Animated.View>
@@ -285,51 +286,54 @@ const DibujarZonas = React.memo(
     );
   }
 );
-const CrearZona = () => {
+const MesasZona = () => {
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const { empresaPick, dataUser, empleadoEmpresa } = useAuthApp();
-  const [zonasEmpresa, setZonasEmpresa] = useState([]);
   const modalAddZonaY = useSharedValue(heightScreen);
   const [modalOpen, setModalOpen] = useState(false);
-  const collecRef = collection(db, "Empresas", empresaPick.id, "Zonas");
+  const collecRef = collection(db, "Empresas", empresaPick.id, "Mesas");
   const [eneabledMove, setEneabledMove] = useState(false);
+  const [mesasZona, setMesasZona] = useState([]);
+  const [zonaData, setZonaData] = useState({});
+  const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
-  const [editZona, setEditZona] = useState(false);
-  const [zonaConfig, setZonaConfig] = useState(null);
+  const [editMesa, setEditMesa] = useState(false);
+  const [mesaConfig, setMesaConfig] = useState(null);
   useEffect(() => {
-    const getDataZonas = async () => {
+    const q = query(collecRef, where("idZona", "==", id));
+
+    const getDataZona = async () => {
       try {
         setLoading(true);
-        const docSnaps = await getDocs(collecRef);
-        const data = docSnaps.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setZonasEmpresa(data);
+
+        const zonaRef = doc(db, "Empresas", empresaPick.id, "Zonas", id);
+        const docSnap = await getDoc(zonaRef);
+        if (docSnap.exists()) {
+          setZonaData(docSnap.data());
+        }
       } catch (error) {
         console.log(error);
       } finally {
         setLoading(false);
       }
     };
-    getDataZonas();
-
-    const unsuscribe = onSnapshot(collecRef, (snapshot) => {
+    getDataZona();
+    const unsuscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-      setZonasEmpresa(data);
+      setMesasZona(data);
     });
     return () => {
-      unsuscribe();
       setLoading(true);
+      unsuscribe();
     };
-  }, [empresaPick.id]);
+  }, [id]);
   const CrearZonaLayout = React.memo(() => {
     const [pickColor, setPickColor] = useState("#3B82F6");
-    const [nameZona, setNameZona] = useState("");
+    const [nameMesa, setNameMesa] = useState("Nombre mesa");
     const colores = [
       "#EF4444", // bg-red-500
       "#3B82F6", // bg-blue-500
@@ -353,44 +357,45 @@ const CrearZona = () => {
     const sizeX = useSharedValue(180);
     const sizeY = useSharedValue(85);
     const scaleNow = useSharedValue(1);
+
     const offsetX = useSharedValue(0);
     const offsetY = useSharedValue(0);
     const colorEdit = useSharedValue(pickColor);
     const [loading, setLoading] = useState(true);
     useEffect(() => {
       setLoading(true);
-      if (!editZona) return;
-      sizeX.value = zonaConfig.width;
-      sizeY.value = zonaConfig.height;
-      colorEdit.value = zonaConfig.color;
-      setPickColor(zonaConfig.color);
-      setNameZona(zonaConfig.nameZona);
-      scaleNow.value = zonaConfig.scale;
+      if (!editMesa) return;
+      sizeX.value = mesaConfig.width;
+      sizeY.value = mesaConfig.height;
+      colorEdit.value = mesaConfig.color;
+      setPickColor(mesaConfig.color);
+      setNameMesa(mesaConfig.nameMesa);
+      scaleNow.value = mesaConfig.scale;
       setTimeout(() => {
         setLoading(false);
       }, 500);
-    }, [editZona]);
-    const addZona = useCallback(async () => {
-      if (editZona) {
+    }, [editMesa]);
+    const addMesa = useCallback(async () => {
+      if (editMesa) {
         try {
           const newEdit = {
             width: sizeX.value,
             height: sizeY.value,
             color: pickColor,
-            nameZona,
+            nameMesa,
           };
-          await updateZonaFirebase(empresaPick.id, zonaConfig.id, newEdit);
+          await updateMesaFirebase(empresaPick.id, mesaConfig.id, newEdit);
         } catch (error) {
           console.log(error);
         } finally {
-          setEditZona(false);
-          setZonaConfig(null);
+          setEditMesa(false);
+          setMesaConfig(null);
           setModalOpen(false);
-          setNameZona("");
+          setNameMesa("");
         }
       } else {
         try {
-          const newZona = {
+          const newMesa = {
             width: sizeX.value,
             height: sizeY.value,
             idEmpresa: empresaPick?.id,
@@ -403,19 +408,19 @@ const CrearZona = () => {
             color: pickColor,
             creadaPor: dataUser?.name,
             createdAt: new Date(),
-            nameZona,
+            nameMesa,
+            idZona: id,
           };
-          await addZonaFirebase(newZona);
+          await addMesaFirebase(newMesa, id);
           setModalOpen(false);
-
-          console.log("Zona añadida");
+          console.log("Mesa añadida");
         } catch (error) {
           console.log(error);
         } finally {
-          setEditZona(false);
-          setZonaConfig(null);
-          setNameZona("");
-          handleClosePress();
+          setEditMesa(false);
+          setMesaConfig(null);
+          setModalOpen(false);
+          setNameMesa("");
         }
       }
     });
@@ -423,7 +428,7 @@ const CrearZona = () => {
       useAnimatedStyle(() => ({
         width: withSpring(sizeX.value),
         height: withSpring(sizeY.value),
-        backgroundColor: editZona ? colorEdit.value : pickColor,
+        backgroundColor: editMesa ? colorEdit.value : pickColor,
         borderRadius: 10, // Bordes más suaves
         position: "relative",
         borderWidth: 2,
@@ -433,7 +438,6 @@ const CrearZona = () => {
         shadowOpacity: 0.2,
         shadowRadius: 6,
         elevation: 6, // Sombra en Android
-        transform: [{ scale: scaleNow.value }],
         //   overflow: "hidden", // Asegura que nada se salga de los bordes redondeadoss
       }))
     );
@@ -458,41 +462,41 @@ const CrearZona = () => {
         sizeX.value = Math.max(Math.min(newX, 300), 50);
         sizeY.value = Math.max(Math.min(newY, 200), 50);
       });
-    const handleDeleteZona = async () => {
+    const handleDeleteMesa = useCallback(async () => {
       try {
-        const zonaRef = doc(
+        const mesaRef = doc(
           db,
           "Empresas",
           empresaPick.id,
-          "Zonas",
-          zonaConfig.id
+          "Mesas",
+          mesaConfig.id
         );
-        await deleteDoc(zonaRef);
-        console.log("Zona Eliminada");
+        await deleteDoc(mesaRef);
+        console.log("Mesa Eliminada");
       } catch (error) {
         console.log(error);
       } finally {
-        setEditZona(false);
-        setZonaConfig(null);
+        setEditMesa(false);
+        setMesaConfig(null);
         setModalOpen(false);
-        setNameZona("");
+        setNameMesa("");
       }
-    };
+    });
     return (
-      <View className="flex-1 w-full items-center dark:bg-dark-navbarBackground ">
+      <View className="flex-1 w-full items-center bg-navbarBackground dark:bg-dark-navbarBackground ">
         <TouchableOpacity
           className="p-2 bg-red-400 dark:bg-textTertiary top-1 absolute right-5 rounded-full"
           onPress={() => {
-            setEditZona(false);
-            setZonaConfig(null);
             setModalOpen(false);
-            setNameZona("");
+            setEditMesa(false);
+            setMesaConfig(null);
+            setNameMesa("");
           }}
         >
           <MiIcono name="close" color="white" />
         </TouchableOpacity>
         <View className="w-[300px] h-[200px] justify-center items-center">
-          {loading && zonaConfig !== null && (
+          {loading && mesaConfig !== null && (
             <ActivityIndicator size={"large"} />
           )}
           {!loading && (
@@ -525,13 +529,13 @@ const CrearZona = () => {
                     style={[animatedText]}
                     className={"text-white font-sans font-bold"}
                   >
-                    {nameZona}
+                    {nameMesa}
                   </Animated.Text>
                 </Animated.View>
               </Animated.View>
             </GestureDetector>
           )}
-          {loading && zonaConfig === null && (
+          {loading && mesaConfig === null && (
             <GestureDetector gesture={panGesture}>
               <Animated.View style={[animatedZonaStyle]}>
                 <Animated.View
@@ -561,7 +565,7 @@ const CrearZona = () => {
                     style={[animatedText]}
                     className={"text-white font-sans font-bold"}
                   >
-                    {nameZona}
+                    {nameMesa}
                   </Animated.Text>
                 </Animated.View>
               </Animated.View>
@@ -573,16 +577,16 @@ const CrearZona = () => {
             <MiInput
               className="w-[200px]"
               placeholder="Nombre de la zona"
-              onChangeText={(text) => setNameZona(text)}
+              onChangeText={(text) => setNameMesa(text)}
               //   value={nameZona}
             />
-            {editZona ? (
-              <Boton className="self-center bg-blue-500 p-2" onPress={addZona}>
-                Editar zona
+            {editMesa ? (
+              <Boton className="self-center bg-blue-500 p-2" onPress={addMesa}>
+                Editar mesa
               </Boton>
             ) : (
-              <Boton className="self-center bg-green-700 p-2" onPress={addZona}>
-                Añadir zona
+              <Boton className="self-center bg-green-700 p-2" onPress={addMesa}>
+                Añadir mesa
               </Boton>
             )}
           </View>
@@ -612,13 +616,13 @@ const CrearZona = () => {
                 activeOpacity={0.7} // Efecto de pulsación
               ></TouchableOpacity>
             ))}
-            {zonaConfig && (
+            {mesaConfig && (
               <TouchableOpacity
                 className="mt-5 px-4 py-2 bg-red-600 rounded"
-                onPress={handleDeleteZona}
+                onPress={handleDeleteMesa}
               >
                 <TextSmall className={"text-xl text-white"}>
-                  Eliminar zona
+                  Eliminar mesa
                 </TextSmall>
               </TouchableOpacity>
             )}
@@ -653,30 +657,33 @@ const CrearZona = () => {
             </>
           ) : (
             <>
-              {zonasEmpresa.length > 0 &&
+              {mesasZona.length > 0 &&
                 !modalOpen &&
-                zonasEmpresa.map((zona) => (
-                  <DibujarZonas
-                    key={zona.id}
-                    {...zona}
+                mesasZona.map((mesa) => (
+                  <DibujarMesas
+                    key={mesa.id}
+                    {...mesa}
                     eneabledMove={eneabledMove}
                     setModalOpen={setModalOpen}
-                    setEditZona={setEditZona}
-                    setEditZona={setEditZona}
-                    setZonaConfig={setZonaConfig}
+                    setMesaConfig={setMesaConfig}
+                    setEditMesa={setEditMesa}
                   />
                 ))}
-              {zonasEmpresa.length == 0 && (
+              {mesasZona.length == 0 && (
                 <View className="absolute inset-0 flex items-center justify-center px-6 text-center">
+                  <TextSmall className="text-4xl font-bold text-gray-800 mb-2">
+                    {zonaData?.nameZona}
+                  </TextSmall>
                   <TextSmall className="text-xl font-bold text-gray-800 mb-2">
-                    ¡Dale vida a tu negocio!
+                    Organiza las mesas de tu zona
                   </TextSmall>
                   <TextSmall className="text-base text-gray-600 mb-1">
-                    Crea tu primera zona y organiza las mesas a tu manera.
+                    Añade y posiciona las mesas según la disposición de tu
+                    espacio.
                   </TextSmall>
                   <TextSmall className="text-base text-gray-600">
-                    ¡No esperes más! Configura tu primera zona y gestiona tu
-                    espacio fácilmente.
+                    Personaliza cada mesa para mejorar la gestión y facilitar el
+                    servicio.
                   </TextSmall>
                 </View>
               )}
@@ -707,7 +714,7 @@ const CrearZona = () => {
                     <TouchableOpacity
                       className={`py-2 px-4 ${
                         eneabledMove ? "bg-green-700" : "bg-red-500"
-                      }  rounded-full`}
+                      } rounded-full`}
                       onPress={() => {
                         setEneabledMove(!eneabledMove);
                       }}
@@ -730,4 +737,4 @@ const CrearZona = () => {
   );
 };
 
-export default CrearZona;
+export default MesasZona;

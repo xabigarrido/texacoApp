@@ -33,7 +33,7 @@ export default function Crear() {
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const { userId, fetchUserData, dataUser } = useAuthApp();
+  const { userId, dataUser, setEmpresaPick } = useAuthApp();
   const { setLoadingData } = useApp();
 
   const router = useRouter();
@@ -196,7 +196,10 @@ export default function Crear() {
               </Boton>
               <Boton
                 className="mt-2 bg-buttonPrimary"
-                onPress={() => router.replace("/home/")}
+                onPress={() => {
+                  setEmpresaPick(null);
+                  router.replace("/home/start");
+                }}
               >
                 Volver atras
               </Boton>

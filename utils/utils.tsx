@@ -179,7 +179,7 @@ export const TextError = ({ children, className }) => {
 export const Boton = ({ children, onPress, className = "bg-green-600" }) => {
   return (
     <TouchableOpacity
-      className={`rounded py-4 px-5 ${className} justify-center`}
+      className={`rounded ${className} justify-center`}
       onPress={onPress}
       onPressIn={() => Keyboard.dismiss()}
     >
@@ -363,7 +363,7 @@ export const MiInput = forwardRef<TextInput, MiInputProps>(
 
     return (
       <TextInput
-        ref={ref} // Asegurarse de pasar la referencia al TextInput
+        ref={ref} // Asegurarse de pasar la referencia al TextInputs
         placeholder={placeholder}
         placeholderTextColor={colorScheme === "dark" ? "white" : "black"}
         className={`bg-inputBackground dark:bg-dark-inputBackground my-2 h-14 text-center text-textPrimary dark:text-dark-textPrimary rounded ${className}`}
@@ -550,7 +550,7 @@ export const NewBox = ({
   children,
   ancho = true,
   paddingHandle = true,
-  noExpandir = true,
+  noExpandir = false,
 }) => {
   return (
     <View
@@ -569,7 +569,7 @@ export const NewBox = ({
         alignSelf: noExpandir ? "" : "center",
       }}
       className={
-        "p-4 bg-cardBackground dark:bg-dark-cardBackground rounded-2xl"
+        "p-4 bg-cardBackground dark:bg-dark-cardBackground rounded-2xl self-center"
       }
     >
       {children}
@@ -692,7 +692,7 @@ export const HeaderUser = React.memo(() => {
         </View>
         <View className="self-start gap-1">
           {dataUser?.trabajando && (
-            <Etiqueta className={"bg-violet-800"}>
+            <Etiqueta className={"bg-green-800"}>
               Trabajando en {dataUser?.trabajandoPara}
             </Etiqueta>
           )}
@@ -701,9 +701,9 @@ export const HeaderUser = React.memo(() => {
           )}
           {!empresaPick && (
             <TouchableOpacity
-              onPress={() => router.navigate("/home/iniciarEnEmpresa")}
+              onPress={() => router.replace("/home/iniciarEnEmpresa")}
             >
-              <Etiqueta className={"bg-green-800"}>
+              <Etiqueta className={"bg-violet-800"}>
                 Invitaciones {invitaciones.length}
               </Etiqueta>
             </TouchableOpacity>
