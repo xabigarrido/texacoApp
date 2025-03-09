@@ -5,6 +5,7 @@ import {
   MarcoLayout,
   MiIcono,
   MiInput,
+  NewBox,
   TextSmall,
 } from "@/utils/utils";
 import React, { useEffect, useRef, useState } from "react";
@@ -161,7 +162,7 @@ export default function Crear() {
       <KeyboardAvoidingView behavior="padding">
         {!empresa.nameComplete && (
           <View className="items-center">
-            <Box className={"p-4 items-center h-[100%] justify-center"}>
+            <NewBox className={"p-4 items-center h-[100%] justify-center"}>
               <View className="my-3 h-[200px] w-full">
                 <View className="absolute left-1/2 -translate-x-1/2 shadow-black">
                   <MiIcono
@@ -179,36 +180,36 @@ export default function Crear() {
                 Registra tu negocio y comienza a gestionar todo en un solo
                 lugar.
               </TextSmall>
-              <TextSmall className={"my-4"}>
-                Rellena los siguientes campos para crear tu empresa y optimiza
-                la administración de tus empleados, ventas y más:
-              </TextSmall>
-              <MiInput
-                placeholder="Escribe el nombre oficial de tu empresa."
-                className="w-[80%]"
-                onChangeText={(text) => setEmpresa({ ...empresa, name: text })}
-              />
-              <Boton
-                onPress={handleName}
-                className="bg-green-600 w-[80%] items-center"
-              >
-                Registrar empresa
-              </Boton>
-              <Boton
-                className="mt-2 bg-buttonPrimary"
-                onPress={() => {
-                  setEmpresaPick(null);
-                  router.replace("/home/start");
-                }}
-              >
-                Volver atras
-              </Boton>
-            </Box>
+              <View className="items-center">
+                <MiInput
+                  placeholder="Escribe el nombre oficial de tu empresa."
+                  className="w-[80%]"
+                  onChangeText={(text) =>
+                    setEmpresa({ ...empresa, name: text })
+                  }
+                />
+                <Boton
+                  onPress={handleName}
+                  className="bg-green-600 w-[80%] items-center"
+                >
+                  Registrar empresa
+                </Boton>
+                <Boton
+                  className="mt-2 bg-buttonPrimary"
+                  onPress={() => {
+                    setEmpresaPick(null);
+                    router.replace("/home/start");
+                  }}
+                >
+                  Volver atras
+                </Boton>
+              </View>
+            </NewBox>
           </View>
         )}
-        {empresa.name && !empresa.logotipoComplete && (
+        {empresa.nameComplete && !empresa.logotipoComplete && (
           <View className="items-center">
-            <Box className={"p-4 items-center h-[100%] justify-center"}>
+            <NewBox className={"p-4 items-center h-[100%] justify-center"}>
               <View className="my-3 h-[200px] w-full">
                 <View className="absolute left-1/2 -translate-x-1/2 shadow-black">
                   <MiIcono
@@ -239,42 +240,43 @@ export default function Crear() {
               <TextSmall className={"text-2xl font-bold mb-1 text-center"}>
                 Logotipo para {empresa.name}
               </TextSmall>
-              <TextSmall className={" mb-2"}>
+              <TextSmall className={" mb-2 text-center"}>
                 Sube el logotipo que refleje la identidad de tu negocio.
               </TextSmall>
-              <TextSmall className={"mb-4"}>
+              <TextSmall className={"mb-4 text-center"}>
                 Si no deseas cargar uno ahora, puedes cambiar de logitpo mas
                 adelante desde los ajustes de empresa.
               </TextSmall>
-
-              <Boton
-                className="bg-violet-600 w-[80%] items-center mb-2"
-                onPress={pickImage}
-              >
-                Cambiar logotipo
-              </Boton>
-              <Boton
-                className="bg-green-600 w-[80%] items-center"
-                onPress={() =>
-                  setEmpresa({ ...empresa, logotipoComplete: true })
-                }
-              >
-                Siguiente
-              </Boton>
-              <Boton
-                className="mt-2 bg-buttonPrimary"
-                onPress={() =>
-                  setEmpresa({ ...empresa, name: "", nameComplete: false })
-                }
-              >
-                Volver atras
-              </Boton>
-            </Box>
+              <View className="items-center">
+                <Boton
+                  className="bg-violet-800 w-[80%] items-center mb-2"
+                  onPress={pickImage}
+                >
+                  Cambiar logotipo
+                </Boton>
+                <Boton
+                  className="bg-green-600 w-[80%] items-center"
+                  onPress={() =>
+                    setEmpresa({ ...empresa, logotipoComplete: true })
+                  }
+                >
+                  Siguiente
+                </Boton>
+                <Boton
+                  className="mt-2 bg-buttonPrimary"
+                  onPress={() =>
+                    setEmpresa({ ...empresa, name: "", nameComplete: false })
+                  }
+                >
+                  Volver atras
+                </Boton>
+              </View>
+            </NewBox>
           </View>
         )}
         {empresa.nameComplete && empresa.name && empresa.logotipoComplete && (
           <View className="items-center">
-            <Box className={"p-4 items-center h-[100%] justify-center"}>
+            <NewBox className={"p-4 items-center h-[100%] justify-center"}>
               <View className="my-3 h-[200px] w-full">
                 <View className="absolute left-1/2 -translate-x-1/2 shadow-black">
                   <MiIcono
@@ -288,7 +290,7 @@ export default function Crear() {
                   <MiIcono
                     type="MaterialCommunityIcons"
                     name="google-maps"
-                    color="#1D4ED8"
+                    color="black"
                     size={100}
                   />
                 </View>
@@ -300,7 +302,7 @@ export default function Crear() {
                 Puedes establecer una ubicación y un rango en metros para que
                 tus empleados solo puedan fichar dentro de la zona de trabajo.
               </TextSmall>
-              <View className="border border-gray-400 p-2 rounded-lg items-center">
+              <View className="p-3 rounded-lg items-center bg-gray-100 dark:bg-zinc-900 mb-1">
                 <TextSmall>
                   Esta opción es opcional y puedes activarla o desactivarla en
                   ajustes cuando quieras.
@@ -316,24 +318,26 @@ export default function Crear() {
                   Activar ahora
                 </Boton>
               </View>
-              <Boton
-                className="w-[80%] bg-green-600 items-center my-2"
-                onPress={() => {
-                  setEmpresa({ ...empresa, ubicacion: false });
-                  handlePressNewEmpresa({ ubicacion: false });
-                }}
-              >
-                Continuar sin activar
-              </Boton>
-              <Boton
-                className="mt-2 bg-buttonPrimary"
-                onPress={() => {
-                  setEmpresa({ ...empresa, logotipoComplete: false });
-                }}
-              >
-                Volver atrás
-              </Boton>
-            </Box>
+              <View className="items-center">
+                <Boton
+                  className="w-[80%] bg-green-600 items-center my-2"
+                  onPress={() => {
+                    setEmpresa({ ...empresa, ubicacion: false });
+                    handlePressNewEmpresa({ ubicacion: false });
+                  }}
+                >
+                  Continuar sin activar
+                </Boton>
+                <Boton
+                  className="mt-2 bg-buttonPrimary"
+                  onPress={() => {
+                    setEmpresa({ ...empresa, logotipoComplete: false });
+                  }}
+                >
+                  Volver atrás
+                </Boton>
+              </View>
+            </NewBox>
           </View>
         )}
       </KeyboardAvoidingView>

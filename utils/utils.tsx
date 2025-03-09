@@ -5,6 +5,7 @@ import {
   Image,
   Keyboard,
   Platform,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -33,6 +34,8 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import Feather from "@expo/vector-icons/Feather";
+import Fontisto from "@expo/vector-icons/Fontisto";
+
 import { useApp } from "@/context/appContext";
 import { useAuthApp } from "@/context/userContext";
 import { Timestamp } from "firebase/firestore";
@@ -80,7 +83,7 @@ export const MarcoLayout = ({
   const { loadingData } = useApp();
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-      <View className="bg-background dark:bg-dark-background">
+      <View className="bg-background dark:bg-zinc-900">
         <StatusBar />
         <View
           style={{
@@ -94,9 +97,7 @@ export const MarcoLayout = ({
         >
           {darkMode && (
             <View className={`absolute z-50 ${classDark}`}>
-              <FadeIn timeOut={1000}>
-                <DarkMode />
-              </FadeIn>
+              <DarkMode />
             </View>
           )}
           {loadingData && (
@@ -127,7 +128,7 @@ export const MarcoLayoutSinDismiss = ({
   const { colorScheme, toggleColorScheme } = useColorScheme();
   const { loadingData } = useApp();
   return (
-    <View className="bg-background dark:bg-dark-background">
+    <View className="bg-background dark:bg-zinc-900">
       <StatusBar />
       <View
         style={{
@@ -183,7 +184,7 @@ export const Boton = ({ children, onPress, className = "bg-green-600" }) => {
       onPress={onPress}
       onPressIn={() => Keyboard.dismiss()}
     >
-      <Text className="text-white dark:text-white font-sans font-bold text-lg">
+      <Text className="text-white dark:text-white font-sans font-bold text-lg p-2">
         {children}
       </Text>
     </TouchableOpacity>
@@ -479,14 +480,15 @@ export const MiIcono = ({
   size = 24,
   color = "",
   className = "",
+  darkColor = false,
 }) => {
   const { colorScheme } = useColorScheme();
   if (color == "" && className == "") {
     color = colorScheme === "dark" ? "#E0E0E0" : "#333333";
+  } else if (color == "black") {
+    color = "#333333";
   } else if (color != "") {
-    color = color;
-  } else {
-    color = className;
+    color = colorScheme === "light" ? color : darkColor ? color : "#E0E0E0";
   }
   if (type === "Entypo") {
     return <Entypo name={name} size={size} color={color} />;
@@ -506,6 +508,8 @@ export const MiIcono = ({
     return <FontAwesome5 name={name} size={size} color={color} />;
   } else if (type === "Feather") {
     return <Feather name={name} size={size} color={color} />;
+  } else if (type === "Fontisto") {
+    return <Fontisto name={name} size={size} color={color} />;
   } else {
     return null;
   }
@@ -551,13 +555,12 @@ export const NewBox = ({
   ancho = true,
   paddingHandle = true,
   noExpandir = false,
+  flex = false,
+  style,
 }) => {
   return (
     <View
       style={{
-        // backgroundColor: "white", // Necesario para que la sombra sea visible
-        // padding: 20,
-        // borderRadius: 10,
         shadowColor: "#000", // Color de la sombra
         shadowOffset: { width: 0, height: 4 }, // Desplazamiento
         shadowOpacity: 0.3, // Opacidad de la sombra
@@ -567,10 +570,11 @@ export const NewBox = ({
         paddingBottom: paddingHandle ? 32 : 10,
         marginBottom: 10,
         alignSelf: noExpandir ? "" : "center",
+        ...style,
       }}
-      className={
-        "p-4 bg-cardBackground dark:bg-dark-cardBackground rounded-2xl self-center"
-      }
+      className={`p-4 bg-cardBackground dark:bg-neutral-950 rounded-2xl self-center ${
+        flex && "flex-1"
+      }`}
     >
       {children}
     </View>
@@ -662,48 +666,73 @@ export const HeaderUser = React.memo(() => {
         shadowRadius: 4, // Difusión de la sombra
         elevation: 20, // Requerido para Androi
         width: "98%",
-        paddingBottom: 32,
         marginBottom: 10,
       }}
-      className={
-        "p-4 bg-cardBackground dark:bg-dark-cardBackground rounded-2xl"
-      }
+      className={"p-4 bg-cardBackground dark:bg-neutral-950 rounded-2xl"}
     >
-      <View className="flex-row items-center justify-around">
-        <View className="gap-2">
-          <TouchableOpacity
-            onPress={async () => {
-              await updateUser(dataUser.id, { newUser: true });
-            }}
-          >
+      <View
+        className={`flex-row items-center ${
+          dataUser?.trabajando ? "justify-around" : "justify-center gap-2"
+        } ${!dataUser?.trabajando && empresaPick && "justify-between"}`}
+      >
+        <View
+          className={`gap-2 shadow-lg bg-gray-200 py-2 px-3 rounded-3xl dark:bg-neutral-900 ${
+            Platform.OS === "android" && "shadow-black"
+          }`}
+        >
+          <View>
             <Image
               source={{ uri: dataUser.imageUrl }}
               style={{ width: 80, height: 80, borderRadius: 15 }}
             />
-          </TouchableOpacity>
+            <View
+              className="absolute bg-gray-200 dark:bg-neutral-900 py-1 px-2 rounded-xl self-center "
+              style={{ bottom: -20 }}
+            >
+              <TextSmall className={"text-center text-gray-800 font-bold"}>
+                {dataUser?.name}
+              </TextSmall>
+            </View>
+          </View>
           {dataUser?.trabajando && datosTikada && (
-            <View className="flex-row justify-center items-center">
+            <View className="flex-row justify-center items-center mt-2">
               <MiIcono type="Ionicons" name="enter" color="#007226" size={30} />
-              <TextSmall className={"text-center text-lg "}>
+              <TextSmall
+                className={"text-center text-lg text-gray-800 font-semibold"}
+              >
                 {datosTikada.horaEntrada}
               </TextSmall>
             </View>
           )}
         </View>
-        <View className="self-start gap-1">
+        <View
+          className={`${
+            dataUser?.trabajando && "self-start gap-1 items-center"
+          } ${dataUser?.trabajando && !empresaPick && "self-center"}`}
+        >
           {dataUser?.trabajando && (
-            <Etiqueta className={"bg-green-800"}>
+            <Etiqueta className={"bg-green-800 dark:bg-neutral-900"}>
               Trabajando en {dataUser?.trabajandoPara}
             </Etiqueta>
           )}
+
           {!dataUser?.trabajando && (
-            <Etiqueta className={"bg-violet-800"}>No trabajando</Etiqueta>
+            <Etiqueta className={"bg-red-800 mb-1 dark:bg-neutral-900"}>
+              No trabajando
+            </Etiqueta>
+          )}
+          {dataUser?.trabajando && (
+            <View>
+              <Etiqueta className={"bg-green-800 mb-1 dark:bg-neutral-900"}>
+                {`${datosTikada?.tiempoTrabajado.horas}h ${datosTikada?.tiempoTrabajado.minutos} min`}
+              </Etiqueta>
+            </View>
           )}
           {!empresaPick && (
             <TouchableOpacity
               onPress={() => router.replace("/home/iniciarEnEmpresa")}
             >
-              <Etiqueta className={"bg-violet-800"}>
+              <Etiqueta className={"bg-violet-800 dark:bg-neutral-900"}>
                 Invitaciones {invitaciones.length}
               </Etiqueta>
             </TouchableOpacity>
@@ -718,7 +747,9 @@ export const HeaderUser = React.memo(() => {
                 }
               }}
             >
-              <Etiqueta className={"bg-green-800"}>Iniciar turno</Etiqueta>
+              <Etiqueta className={"bg-green-800 dark:bg-neutral-900"}>
+                Iniciar turno
+              </Etiqueta>
             </TouchableOpacity>
           )}
           {dataUser?.trabajando &&
@@ -727,31 +758,29 @@ export const HeaderUser = React.memo(() => {
               <TouchableOpacity
                 onPress={() => {
                   if (!empresaPick.posicionHabilitada) {
-                    addTikadaSinPosicion(dataUser, empresaPick);
+                    mostrarAlerta("¿Desea cerrar el turno?", "", () => {
+                      addTikadaSinPosicion(dataUser, empresaPick);
+                    });
                   } else {
                     router.replace("/home/start/tikadaMaps");
                   }
                 }}
               >
-                <Etiqueta className={"bg-red-800"}>Salir del turno</Etiqueta>
+                <Etiqueta className={"bg-red-800 dark:bg-neutral-900"}>
+                  Salir del turno
+                </Etiqueta>
               </TouchableOpacity>
             )}
         </View>
 
         {empresaPick && (
-          <View className="items-center">
-            {dataUser?.trabajando && (
-              <View className="flex-row ml-1">
-                <TextSmall className={"text-center text-lg"}>
-                  {`${datosTikada?.tiempoTrabajado.horas}h ${datosTikada?.tiempoTrabajado.minutos} min`}
-                </TextSmall>
-              </View>
-            )}
+          <View className="self-center">
             <TouchableOpacity
               onPress={() => {
                 setEmpresaPick(null);
                 router.replace("/home/");
               }}
+              className="shadow-lg"
             >
               <Image
                 source={{ uri: empresaPick?.logotipoUrl }}
@@ -761,29 +790,20 @@ export const HeaderUser = React.memo(() => {
           </View>
         )}
       </View>
-      <View
-        className="self-center absolute p-2 bg-background dark:bg-dark-background rounded-lg"
-        style={{
-          bottom: -15,
-          shadowColor: "#000", // Color de la sombra
-          shadowOffset: { width: 0, height: 4 }, // Desplazamiento
-          shadowOpacity: 0.3, // Opacidad de la sombra
-          shadowRadius: 4, // Difusión de la sombra
-          elevation: 20, // Requerido para Androi
-          zIndex: 99999999999,
-        }}
-      >
-        <TextSmall className={"text-gray-700 font-sans font-semibold text-lg"}>
-          {dataUser?.name} {dataUser?.subname}
-        </TextSmall>
-      </View>
     </View>
   );
 });
 export const Etiqueta = ({ children, className }) => {
   return (
-    <View className={`px-2 py-1 rounded self-start ${className}`}>
-      <TextSmall className={"text-white text-lg"}>{children}</TextSmall>
+    <View className={`px-3 py-2 rounded-lg self-start ${className}`}>
+      <Text className="text-white text-base font-medium">{children}</Text>
+    </View>
+  );
+};
+export const NewEtiqueta = ({ children, className }) => {
+  return (
+    <View className={`rounded-lg self-start ${className}`}>
+      <Text className="text-white text-base font-medium">{children}</Text>
     </View>
   );
 };
@@ -806,11 +826,15 @@ export const BotonesAdmin = ({
   onPress,
 }) => {
   return (
-    <TouchableOpacity onPress={onPress}>
-      <View className="flex-row items-center gap-3 border-[.5px] p-1 rounded-xl w-[300px] justify-between my-1 dark:border-white">
+    <TouchableOpacity
+      onPress={onPress}
+      className="w-[300px] my-2 rounded-2xl shadow-md  bg-gray-100 dark:bg-neutral-900"
+    >
+      <View className="flex-row items-center gap-4 border p-3 rounded-2xl justify-between dark:border-zinc-900 border-gray-300">
         <MiIcono type={type} name={name} color={color} size={size} />
-        <TextSmall className={"text-xl text-center"}>{nameBoton}</TextSmall>
-
+        <Text className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+          {nameBoton}
+        </Text>
         <View />
       </View>
     </TouchableOpacity>
@@ -1039,7 +1063,7 @@ export const calcularTiempoTrabajadoAdmin = (entrada, salida) => {
   const minutos = Math.floor((diferenciaMs % (1000 * 60 * 60)) / (1000 * 60));
   const segundos = Math.floor((diferenciaMs % (1000 * 60)) / 1000);
 
-  return `${horas}:${minutos < 10 ? "0" : ""}${minutos}`; // Retorna las horas y minutos, en formato "horas:minutos"
+  return `${horas}h ${minutos < 10 ? "0" : ""}${minutos} min`; // Retorna las horas y minutos, en formato "horas:minutos"
 };
 export function calcularPago(
   entrada: { seconds: number; nanoseconds: number },
@@ -1073,3 +1097,36 @@ export function calcularPago(
 
   return `${euros},${centimosFormateados}`;
 }
+
+export const Caja = ({ children }) => {
+  const { colorScheme } = useColorScheme();
+  const styles = StyleSheet.create({
+    box: {
+      width: 100,
+      height: 100,
+      backgroundColor: colorScheme === "dark" ? "#1E1E1E" : "#f5f5f5",
+      justifyContent: "center",
+      alignItems: "center",
+      borderRadius: 10,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+  });
+  return <View style={styles.box}>{children}</View>;
+};
+
+export const Texto = ({ children }) => {
+  const { colorScheme } = useColorScheme();
+
+  const style = StyleSheet.create({
+    text: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colorScheme === "dark" ? "#f5f5f5" : "#333",
+    },
+  });
+  return <Text style={style.text}>{children}</Text>;
+};

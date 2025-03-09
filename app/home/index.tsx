@@ -28,7 +28,7 @@ const FirstHome = () => {
     if (!isLoaded) return;
     if (!isSignedIn) return;
     if (!dataUser) return;
-    if (!dataUser.newUser) return router.replace("/home/start");
+    // if (!dataUser.newUser) return router.replace("/home/start");
   }, [isLoaded, isSignedIn, dataUser]);
   return (
     <MarcoLayoutSinDismiss
@@ -37,18 +37,16 @@ const FirstHome = () => {
     >
       <ScrollView>
         <FadeInSinInputs duration={2000}>
-          {dataUser.newUser && (
-            <>
-              {!verMasEmpresa && (
-                <HeaderPrimeraVez dataUser={dataUser} signOut={signOut} />
-              )}
+          <>
+            {!verMasEmpresa && (
+              <HeaderPrimeraVez dataUser={dataUser} signOut={signOut} />
+            )}
 
-              <PrimeraVez
-                setVerMasEmpresa={setVerMasEmpresa}
-                verMasEmpresa={verMasEmpresa}
-              />
-            </>
-          )}
+            <PrimeraVez
+              setVerMasEmpresa={setVerMasEmpresa}
+              verMasEmpresa={verMasEmpresa}
+            />
+          </>
         </FadeInSinInputs>
       </ScrollView>
     </MarcoLayoutSinDismiss>

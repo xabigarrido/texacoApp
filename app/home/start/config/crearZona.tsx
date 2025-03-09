@@ -33,9 +33,12 @@ import { Boton, Etiqueta, MiIcono, MiInput, TextSmall } from "@/utils/utils";
 import { colorScheme, useColorScheme } from "nativewind";
 import { StatusBar } from "expo-status-bar";
 import Animated, {
+  cancelAnimation,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
@@ -52,9 +55,12 @@ import {
   doc,
   getDocs,
   onSnapshot,
+  query,
   updateDoc,
+  where,
 } from "@/firebaseConfig";
 import { useRouter } from "expo-router";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 const { height: heightScreen, width: widthScreen } = Dimensions.get("window");
 
 const DibujarZonas = React.memo(
@@ -73,6 +79,7 @@ const DibujarZonas = React.memo(
     setModalOpen,
     setEditZona,
     setZonaConfig,
+    pendiente,
   }) => {
     const { empresaPick, empleadoEmpresa } = useAuthApp();
     const translateX = useSharedValue(initialX * widthScreen);
@@ -85,6 +92,7 @@ const DibujarZonas = React.memo(
     const offScale = useSharedValue(scale);
     const zIndexNow = useSharedValue(zIndex);
     const zonaSelected = useSharedValue(0);
+    const opacityBox = useSharedValue(1);
     const [gestureEneabled, setGestureEneabled] = useState(true);
     const router = useRouter();
     const navigateToZone = (id) => {
@@ -97,7 +105,33 @@ const DibujarZonas = React.memo(
       scaleBox.value = withSpring(scale);
       rotateRad.value = withSpring(rotate);
       zIndexNow.value = zIndex;
-    }, [initialX, initialY, rotate, scale, zIndex, color, width, height]);
+      if (pendiente) {
+        console.log(pendiente);
+        opacityBox.value = withRepeat(
+          withTiming(0.1, { duration: 700 }),
+          -1,
+          true
+        );
+        scaleBox.value = withRepeat(
+          withTiming(scale * 0.9, { duration: 500 }),
+          -1,
+          true
+        );
+      } else {
+        opacityBox.value = withTiming(1, { duration: 500 });
+        scaleBox.value = withTiming(scale, { duration: 500 });
+      }
+    }, [
+      initialX,
+      initialY,
+      rotate,
+      scale,
+      zIndex,
+      color,
+      width,
+      height,
+      pendiente,
+    ]);
     const collecRef = collection(db, "Mesitas");
     const updateZona = useCallback(async (id, x, y, rotate, scale) => {
       try {
@@ -129,6 +163,7 @@ const DibujarZonas = React.memo(
         height: newHeight,
         left: isSelected ? -deltaX : 0,
         top: isSelected ? -deltaY : 0,
+        opacity: opacityBox.value,
         transform: [
           { translateX: translateX.value },
           { translateY: translateY.value },
@@ -254,7 +289,7 @@ const DibujarZonas = React.memo(
       rotateGesture,
       pinchGesture,
       tapGesture,
-      longPress,
+      // longPress,
       gestureFinish
     );
     return (
@@ -287,7 +322,7 @@ const DibujarZonas = React.memo(
 );
 const CrearZona = () => {
   const insets = useSafeAreaInsets();
-  const { colorScheme } = useColorScheme();
+  const { colorScheme, toggleColorScheme } = useColorScheme();
   const { empresaPick, dataUser, empleadoEmpresa } = useAuthApp();
   const [zonasEmpresa, setZonasEmpresa] = useState([]);
   const modalAddZonaY = useSharedValue(heightScreen);
@@ -297,6 +332,9 @@ const CrearZona = () => {
   const [loading, setLoading] = useState(true);
   const [editZona, setEditZona] = useState(false);
   const [zonaConfig, setZonaConfig] = useState(null);
+  const comandasRef = collection(db, "Empresas", empresaPick.id, "Comandas");
+  const router = useRouter();
+
   useEffect(() => {
     const getDataZonas = async () => {
       try {
@@ -310,11 +348,19 @@ const CrearZona = () => {
       } catch (error) {
         console.log(error);
       } finally {
-        setLoading(false);
+        setTimeout(() => {
+          setLoading(false);
+        }, 500);
       }
     };
     getDataZonas();
-
+    // const q = query(comandasRef, where("vista", "==", false));
+    // const unsuscribe2 = onSnapshot(q, (snapshot) => {
+    //   const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    //   updateZonaFirebase(empresaPick.id, snapshot.docs[0].data().idZona, {
+    //     pendiente: true,
+    //   });
+    // });
     const unsuscribe = onSnapshot(collecRef, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -324,6 +370,7 @@ const CrearZona = () => {
     });
     return () => {
       unsuscribe();
+      // unsuscribe2();
       setLoading(true);
     };
   }, [empresaPick.id]);
@@ -631,7 +678,7 @@ const CrearZona = () => {
     <GestureHandlerRootView style={{ flex: 1 }}>
       {/* SafeAreaView se encarga de ajustar el contenido a las áreas segussrass */}
       <SafeAreaView
-        className="bg-background dark:bg-dark-background"
+        className="bg-background dark:bg-zinc-900"
         style={{ flex: 1 }}
       >
         <View
@@ -666,56 +713,139 @@ const CrearZona = () => {
                     setZonaConfig={setZonaConfig}
                   />
                 ))}
-              {zonasEmpresa.length == 0 && (
+              {zonasEmpresa.length == 0 && !modalOpen && (
                 <View className="absolute inset-0 flex items-center justify-center px-6 text-center">
                   <TextSmall className="text-xl font-bold text-gray-800 mb-2">
                     ¡Dale vida a tu negocio!
                   </TextSmall>
-                  <TextSmall className="text-base text-gray-600 mb-1">
+                  <TextSmall className="text-base text-gray-600 mb-1 text-center">
                     Crea tu primera zona y organiza las mesas a tu manera.
                   </TextSmall>
-                  <TextSmall className="text-base text-gray-600">
+                  <TextSmall className="text-base text-gray-600 text-center">
                     ¡No esperes más! Configura tu primera zona y gestiona tu
                     espacio fácilmente.
                   </TextSmall>
                 </View>
               )}
               {modalOpen && <CrearZonaLayout />}
-              {/* Botones flotantes */}
-              {empleadoEmpresa?.encargadoEmpresa && !modalOpen && (
+              {!modalOpen && (
                 <View
-                  style={{
-                    bottom: 3,
-                    right: 5,
-                    position: "absolute",
-                    justifyContent: "center",
-                  }}
-                  className="p-2 bg-navbarBackground dark:bg-dark-navbarBackground rounded-xl"
+                  style={{ position: "absolute", bottom: 12, left: 10 }}
+                  className="p-2 bg-navbarBackground dark:bg-dark-navbarBackground rounded-xl shadow-sm border border-gray-300 dark:border-stone-900"
                 >
-                  <View className="flex-row justify-center gap-2">
+                  <View className="flex-row justify-center gap-2 items-center">
                     <TouchableOpacity
-                      className="py-2 px-4 bg-green-700 rounded-full"
-                      onPress={() => setModalOpen(true)}
+                      onPress={() =>
+                        router.replace("/home/start/optionsEmpresa")
+                      }
+                      style={{
+                        padding: 8,
+                        backgroundColor: "#1d65b8",
+                        borderRadius: 50,
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 3,
+                        elevation: 3,
+                      }}
+                      activeOpacity={0.8}
                     >
                       <MiIcono
-                        type="FontAwesome6"
-                        name="add"
-                        size={30}
+                        type="FontAwesome5"
+                        name="home"
+                        size={23}
                         color="white"
                       />
                     </TouchableOpacity>
                     <TouchableOpacity
-                      className={`py-2 px-4 ${
-                        eneabledMove ? "bg-green-700" : "bg-red-500"
-                      }  rounded-full`}
-                      onPress={() => {
-                        setEneabledMove(!eneabledMove);
+                      onPress={() =>
+                        router.replace("/home/start/optionsEmpresa")
+                      }
+                    >
+                    <TextSmall className="font-bold text-xl">
+                      {empresaPick.nameEmpresa}
+                    </TextSmall>
+                    </TouchableOpacity>
+
+                  </View>
+                </View>
+              )}
+
+              {/* Botones flotantes */}
+              {!modalOpen && (
+                <View
+                  style={{ position: "absolute", bottom: 12, right: 12 }}
+                  className="p-2 bg-navbarBackground dark:bg-dark-navbarBackground rounded-xl shadow-sm border border-gray-300 dark:border-stone-900"
+                >
+                  <View className="flex-row justify-center gap-2">
+                    <TouchableOpacity
+                      onPress={() => toggleColorScheme()}
+                      style={{
+                        padding: 8,
+                        // backgroundColor: "#10B981",
+                        borderRadius: 50,
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 3,
+                        elevation: 3,
                       }}
+                      activeOpacity={0.8}
+                    >
+                      {colorScheme === "dark" && (
+                        <MaterialIcons
+                          name="light-mode"
+                          size={24}
+                          color="white"
+                        />
+                      )}
+                      {colorScheme === "light" && (
+                        <MaterialIcons
+                          name="dark-mode"
+                          size={24}
+                          color="black"
+                        />
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setModalOpen(true)}
+                      style={{
+                        padding: 8,
+                        backgroundColor: "#10B981",
+                        borderRadius: 50,
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 3,
+                        elevation: 3,
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <MiIcono
+                        type="FontAwesome6"
+                        name="add"
+                        size={24}
+                        color="white"
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setEneabledMove(!eneabledMove)}
+                      style={{
+                        padding: 8,
+                        backgroundColor: eneabledMove ? "#10B981" : "#EF4444",
+                        borderRadius: 50,
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 3,
+                        elevation: 3,
+                      }}
+                      activeOpacity={0.8}
                     >
                       <MiIcono
                         type="MaterialIcons"
                         name="create"
-                        size={30}
+                        size={24}
                         color="white"
                       />
                     </TouchableOpacity>

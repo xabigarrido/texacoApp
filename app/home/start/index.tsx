@@ -14,7 +14,14 @@ import {
 } from "@/utils/utils";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  Platform,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const pickEmpresas = React.memo(() => {
   const {
@@ -55,29 +62,46 @@ const pickEmpresas = React.memo(() => {
   };
   return (
     <MarcoLayout darkMode={true}>
+      <View className="absolute" style={{ bottom: 20, left: 20 }}>
+        <TouchableOpacity onPress={() => router.replace("/home/crearEmpresa")}>
+          <MiIcono name="add-circle" type="Ionicons" color="green" size={50} />
+        </TouchableOpacity>
+      </View>
       <View className="items-center">
         <HeaderUser dataUser={dataUser} />
-        <NewBox className={""}>
-          <View className="absolute top-2 right-2">
-            <TouchableOpacity
-              onPress={() => router.replace("/home/crearEmpresa")}
-            >
-              <MiIcono
-                name="add-circle"
-                type="Ionicons"
-                color="green"
-                size={36}
-              />
-            </TouchableOpacity>
-          </View>
+        <View className="w-full mt-10">
           {empresas.length == 0 &&
             !dataUser.newUser &&
             dataUser.empresasPostuladas.length > 0 && (
               <>
                 <ActivityIndicator />
-                <TextSmall>Cargando empresas</TextSmall>
               </>
             )}
+          {/* <View className="flex-row flex-wrap items-center justify-center gap-4">
+            {empresas.length > 0 &&
+              empresas.map((empresa) => (
+                <TouchableOpacity
+                  key={empresa.id}
+                  onPress={() => {
+                    setEmpresaPick(empresa);
+                    router.replace("/home/start/optionsEmpresa");
+                  }}
+                  className={`w-[120px] h-[120px] rounded-xl bg-gray-100 dark:bg-zinc-900 shadow-md items-center justify-center ${
+                    Platform.OS === "android" && "shadow-black"
+                  }`}
+                >
+                  <View style={{ paddingVertical: 5 }}>
+                    <Image
+                      source={{ uri: empresa?.logotipoUrl }}
+                      style={{ width: 80, height: 80, borderRadius: 20 }}
+                    />
+                    <Text className="text-lg font-bold text-gray-900 dark:text-white mt-2 text-center">
+                      {empresa.nameEmpresa}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+          </View> */}
           <View className="flex-row flex-wrap items-center justify-center gap-4">
             {empresas.length > 0 &&
               empresas.map((empresa) => (
@@ -87,15 +111,23 @@ const pickEmpresas = React.memo(() => {
                     setEmpresaPick(empresa);
                     router.replace("/home/start/optionsEmpresa");
                   }}
+                  className={`w-[120px] h-[120px] rounded-xl bg-gray-100 dark:bg-neutral-950 shadow-md items-center justify-center ${
+                    Platform.OS === "android" && "shadow-black"
+                  }`}
                 >
-                  <View className="h-[100px] w-[100px] items-center justify-center">
+                  <View style={{ paddingVertical: 5 }}>
                     <Image
-                      source={{ uri: empresa.logotipoUrl || "default" }}
-                      style={{ width: 70, height: 70, borderRadius: 20 }}
+                      source={{ uri: empresa?.logotipoUrl }}
+                      style={{ width: 80, height: 80, borderRadius: 20 }}
                     />
-                    <TextSmall className={"text-2xl font-semibold"}>
-                      {empresa.nameEmpresa}
-                    </TextSmall>
+                    {/* <View
+                      className="absolute self-center px-2 py-1 rounded-xl dark:bg-neutral-950 bg-gray-100"
+                      style={{ bottom: -10 }}
+                    >
+                      <Text className="text-md font-bold text-gray-900 dark:text-white text-center">
+                        {empresa.nameEmpresa}
+                      </Text>
+                    </View> */}
                   </View>
                 </TouchableOpacity>
               ))}
@@ -110,7 +142,7 @@ const pickEmpresas = React.memo(() => {
               </Boton>
             </View>
           )}
-        </NewBox>
+        </View>
       </View>
     </MarcoLayout>
   );

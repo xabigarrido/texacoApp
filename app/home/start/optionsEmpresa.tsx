@@ -51,10 +51,15 @@ const OptionsEmpresa = () => {
           {empleadoEmpresa?.encargadoEmpresa && (
             <TouchableOpacity
               onPress={() => router.navigate("/home/start/config")}
+              className="absolute self-center -bottom-8 bg-gray-200 dark:bg-neutral-900 p-3 rounded-full shadow-lg"
+              style={{ elevation: 5 }}
             >
-              <View style={{ position: "absolute", right: -10, top: -30 }}>
-                <MiIcono size={36} type="Ionicons" name="settings" />
-              </View>
+              <MiIcono
+                size={36}
+                type="Ionicons"
+                name="settings"
+                color="#353535"
+              />
             </TouchableOpacity>
           )}
           <View className="flex-row flex-wrap gap-4 self-center">

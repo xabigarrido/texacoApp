@@ -320,7 +320,11 @@ export const addTikadaSinPosicion = async (dataUser, empresaPcik) => {
 export const addEncargadoEmpresa = async (idDoc, idEmpresa) => {
   try {
     const empleadoRef = doc(db, "Empresas", idEmpresa, "Empleados", idDoc);
-    await updateDoc(empleadoRef, { encargadoEmpresa: true });
+    const docEmpleado = await getDoc(empleadoRef);
+
+    await updateDoc(empleadoRef, {
+      encargadoEmpresa: !docEmpleado.data().encargadoEmpresa,
+    });
     console.log("Encargado añadido");
   } catch (error) {
     console.log(error);
@@ -345,32 +349,35 @@ export const getEmpleadoEmpresa = async (idEmpresa, idEmpleado) => {
     console.log(error);
   }
 };
-export const listarEmpleados = async (idEmpresa) => {
-  try {
-    const empleadosRef = collection(db, "Empresas", idEmpresa, "Empleados");
-    const empleadosSnap = await getDocs(empleadosRef);
+// export const listarEmpleados = async (idEmpresa) => {
+//   try {
+//     const empleadosRef = collection(db, "Empresas", idEmpresa, "Empleados");
+//     const empleadosSnap = await getDocs(empleadosRef);
 
-    if (empleadosSnap.empty) {
-      console.log("No hay empleados en esta empresa");
-      return;
-    }
+//     if (empleadosSnap.empty) {
+//       console.log("No hay empleados en esta empresa");
+//       return;
+//     }
 
-    empleadosSnap.forEach((doc) => {
-      console.log("Empleado encontrado:", doc.id, doc.data());
-    });
-  } catch (error) {
-    console.log(error);
-  }
-};
+//     empleadosSnap.forEach((doc) => {
+//       console.log("Empleado encontrado:", doc.id, doc.data());
+//     });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };
 
 export const obtenerTikadas = async (idUser) => {
-  console.log(idUser);
   if (!idUser) {
     return { estado: false, data: "ID de usuario no válido" };
   }
 
   try {
-    const q = query(collecRefTikadas, where("idEmpleado", "==", idUser));
+    const q = query(
+      collecRefTikadas,
+      where("idEmpleado", "==", idUser),
+      orderBy("salida", "desc")
+    );
     const docSnaps = await getDocs(q);
 
     if (docSnaps.empty) {
@@ -388,7 +395,19 @@ export const obtenerTikadas = async (idUser) => {
     return { estado: false, data: error.message };
   }
 };
-
+export const obtenerZonasFirebase = async (empresaId) => {
+  try {
+    const zonasRef = collection(db, "Empresas", empresaId, "Zonas");
+    const docSnaps = await getDocs(zonasRef);
+    const dataZonas = docSnaps.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    return dataZonas;
+  } catch (error) {
+    console.log(error);
+  }
+};
 export const addZonaFirebase = async (newZona) => {
   if (!newZona.idEmpresa) {
     console.error("Error: idEmpresa es undefined o null");
@@ -452,7 +471,7 @@ export const updateZonaZIndex = async (empresaId, zonaId) => {
   }
 };
 
-const getNextMesasZindex = async (empresaId, idZona) => {
+export const getNextMesasZindex = async (empresaId, idZona) => {
   const zonasRef = collection(db, "Empresas", empresaId, "Mesas");
 
   const q = query(
@@ -508,8 +527,207 @@ export const addCategoryEmpresa = async (idEmpresa, dataCategory) => {
       idEmpresa,
       "Categorias"
     );
-    await addDoc(categoryEmpresaRef, dataCategory);
+    const q = query(categoryEmpresaRef, orderBy("position", "desc"), limit(1));
+    const docSnaps = await getDocs(q);
+    let newPosition = 1;
+    if (!docSnaps.empty) {
+      const lastCategory = docSnaps.docs[0].data();
+      newPosition = lastCategory.position + 1;
+    }
+    await addDoc(categoryEmpresaRef, {
+      ...dataCategory,
+      position: newPosition,
+    });
     console.log("Categoria agregada");
+    return true;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getCategoriasEmpresa = async (idEmpresa) => {
+  try {
+    const categoriasRef = collection(db, "Empresas", idEmpresa, "Categorias");
+    const q = query(categoriasRef, orderBy("position", "desc"));
+    const docSnaps = await getDocs(q);
+
+    const dataCategorias = docSnaps.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    return { estado: true, data: dataCategorias };
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const editCategoriaEmpresa = async (
+  idEmpresa,
+  idCategoria,
+  dataCategoria
+) => {
+  console.log(idCategoria, dataCategoria);
+  const categoriaRef = doc(
+    db,
+    "Empresas",
+    idEmpresa,
+    "Categorias",
+    idCategoria
+  );
+  await updateDoc(categoriaRef, dataCategoria);
+  try {
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const deleteCategoriaEmpresa = async (idEmpresa, idCategoria) => {
+  try {
+    const categoriaRef = doc(
+      db,
+      "Empresas",
+      idEmpresa,
+      "Categorias",
+      idCategoria
+    );
+    await deleteDoc(categoriaRef);
+    console.log("Categoria eliminada");
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const addProductoEmpresa = async (idEmpresa, producto) => {
+  try {
+    const productosEmpresaRef = collection(
+      db,
+      "Empresas",
+      idEmpresa,
+      "Productos"
+    );
+    const q = query(productosEmpresaRef, orderBy("position", "desc"), limit(1));
+    const docSnap = await getDocs(q);
+    let newPosition = 1;
+    if (!docSnap.empty) {
+      const previousPosition = Number(docSnap.docs[0].data().position);
+      newPosition = isNaN(previousPosition) ? 1 : previousPosition + 1;
+    }
+    await addDoc(productosEmpresaRef, { ...producto, position: newPosition });
+    console.log("Producto añadido con posición:", newPosition);
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const deleteProductoEmpresa = async (idEmpresa, idProducto) => {
+  try {
+    const productoRef = doc(db, "Empresas", idEmpresa, "Productos", idProducto);
+    await deleteDoc(productoRef);
+    console.log("producto eliminado");
+    return true;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const updateProductoEmpresa = async (idEmpresa, idProducto, newData) => {
+  console.log(idEmpresa, idProducto, newData);
+  try {
+    const productoRef = doc(db, "Empresas", idEmpresa, "Productos", idProducto);
+    await updateDoc(productoRef, newData);
+    console.log("Producto modificado");
+    return true;
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const obetenerProductosEmpresa = async (idEmpresa) => {
+  try {
+    const productosEmpresaRef = collection(
+      db,
+      "Empresas",
+      idEmpresa,
+      "Productos"
+    );
+    const docSnaps = await getDocs(productosEmpresaRef);
+    const dataProductos = docSnaps.docs.map((producto) => ({
+      id: producto.id,
+      ...producto.data(),
+    }));
+    return { estado: true, data: dataProductos };
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const obtenerMesaEmpresa = async (idEmpresa, idMesa) => {
+  try {
+    const docMesa = doc(db, "Empresas", idEmpresa, "Mesas", idMesa);
+    const docSnap = await getDoc(docMesa);
+    const docData = { id: docSnap.id, ...docSnap.data() };
+    return docData;
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const addComandaMesa = async (idEmpresa, dataMesa) => {
+  try {
+    const mesaDoc = doc(db, "Empresas", idEmpresa, "Mesas", dataMesa.idMesa);
+    await updateZonaFirebase(idEmpresa, dataMesa.idZona, { pendiente: true });
+    const comandasEmpresaRef = collection(
+      db,
+      "Empresas",
+      idEmpresa,
+      "Comandas"
+    );
+    const q = query(
+      comandasEmpresaRef,
+      where("idMesa", "==", dataMesa.idMesa),
+      where("estado", "==", "creando")
+    );
+    const docScnap = await getDocs(q);
+    if (!docScnap.empty) {
+      const docRef = doc(
+        db,
+        "Empresas",
+        idEmpresa,
+        "Comandas",
+        docScnap.docs[0].id
+      );
+      console.log("Comanda actualizada");
+      await updateDoc(mesaDoc, { pendiente: true });
+
+      return await updateDoc(docRef, dataMesa);
+    }
+    await addDoc(comandasEmpresaRef, dataMesa);
+    console.log("Comanda añadida");
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const comandaEnCurso = async (idEmpresa, idMesa) => {
+  try {
+    const comandasRef = collection(db, "Empresas", idEmpresa, "Comandas");
+    const q = query(
+      comandasRef,
+      where("idMesa", "==", idMesa),
+      where("estado", "==", "creando")
+    );
+    const docSnap = await getDocs(q);
+    if (!docSnap.empty) {
+      return docSnap.docs[0].data();
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const changeMesaToZona = async (
+  idEmpresa,
+  idMesa,
+  idNewZona,
+  nameNewZona
+) => {
+  try {
+    const docRef = doc(db, "Empresas", idEmpresa, "Mesas", idMesa);
+    await updateDoc(docRef, { idZona: idNewZona, ubicationZona: nameNewZona });
+    console.log("cambie zona");
+    return true;
   } catch (error) {
     console.log(error);
   }
